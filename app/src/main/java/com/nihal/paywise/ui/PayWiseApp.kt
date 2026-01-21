@@ -8,6 +8,13 @@ import com.nihal.paywise.navigation.NotificationNavRequest
 import com.nihal.paywise.navigation.PayWiseNavHost
 import com.nihal.paywise.ui.theme.PayWiseTheme
 
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import com.nihal.paywise.ui.components.AppBackground
+import com.nihal.paywise.ui.components.PayWiseScaffold
+
 @Composable
 fun PayWiseApp(
     navRequest: NotificationNavRequest? = null,
@@ -15,6 +22,7 @@ fun PayWiseApp(
 ) {
     PayWiseTheme {
         val navController = rememberNavController()
+        val snackbarHostState = remember { SnackbarHostState() }
         
         LaunchedEffect(navRequest) {
             navRequest?.let { request ->
@@ -34,6 +42,17 @@ fun PayWiseApp(
             }
         }
         
-        PayWiseNavHost(navController = navController)
+        AppBackground {
+            PayWiseScaffold(
+                navController = navController,
+                snackbarHostState = snackbarHostState
+            ) { innerPadding ->
+                PayWiseNavHost(
+                    navController = navController,
+                    snackbarHostState = snackbarHostState,
+                    modifier = Modifier.padding(innerPadding)
+                )
+            }
+        }
     }
 }

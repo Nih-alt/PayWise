@@ -13,9 +13,12 @@ import com.nihal.paywise.ui.recurring.AddRecurringScreen
 import com.nihal.paywise.ui.recurring.RecurringHistoryScreen
 import com.nihal.paywise.ui.recurring.RecurringListScreen
 
+import androidx.compose.material3.SnackbarHostState
+
 @Composable
 fun PayWiseNavHost(
     navController: NavHostController,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
     NavHost(
@@ -34,6 +37,7 @@ fun PayWiseNavHost(
         }
         composable("recurring_list") {
             RecurringListScreen(
+                snackbarHostState = snackbarHostState,
                 onAddRecurringClick = { navController.navigate("add_recurring") },
                 onHistoryClick = { id -> navController.navigate("recurring_history/$id") }
             )

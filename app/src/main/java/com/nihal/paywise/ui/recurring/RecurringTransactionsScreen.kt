@@ -1,22 +1,36 @@
 package com.nihal.paywise.ui.recurring
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -24,7 +38,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,15 +45,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
+import com.nihal.paywise.ui.components.AppBackground
+import com.nihal.paywise.ui.components.EmptyState
+import com.nihal.paywise.ui.components.SoftCard
+import com.nihal.paywise.ui.util.CategoryVisuals
 import kotlinx.coroutines.flow.collectLatest
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecurringHistoryScreen(
     navigateBack: () -> Unit,
@@ -76,10 +93,22 @@ fun RecurringHistoryScreen(
         AlertDialog(
             onDismissRequest = { viewModel.dismissDelete() },
             title = { Text("Delete payment?") },
-            text = { Text("Delete payment of ${itemToDelete.amountText} on ${itemToDelete.dateText}?") },
+            text = { 
+                Column {
+                    Text("Are you sure you want to delete this payment record?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${itemToDelete?.amountText} on ${itemToDelete?.dateText}",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
             confirmButton = {
-                TextButton(onClick = { viewModel.deleteTransaction(itemToDelete.transactionId) }) {
-                    Text("Delete", color = Color.Red)
+                Button(
+                    onClick = { itemToDelete?.let { viewModel.deleteTransaction(it.transactionId) } },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
                 }
             },
             dismissButton = {
@@ -92,53 +121,91 @@ fun RecurringHistoryScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.Transparent,
         topBar = {
-            TopAppBar(
-                title = { Text("History") },
-                navigationIcon = {
-                    IconButton(onClick = navigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
+             Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, start = 8.dp)
+            ) {
+                IconButton(onClick = navigateBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
-            )
+                Text(
+                    text = "History",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            }
         }
     ) { innerPadding ->
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(horizontal = 16.dp)
-        ) {
-            header?.let { h ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(text = h.recurringTitle, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                        Text(text = h.amountText, fontSize = 18.sp, color = Color.Red, fontWeight = FontWeight.SemiBold)
-                        Text(text = "${h.categoryName} • ${h.accountName}", fontSize = 14.sp, color = Color.Gray)
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Text(text = h.dueRuleText, fontSize = 14.sp)
-                        Text(text = h.statusText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Text(text = "Total Paid (Last 6m): ${h.totalPaidLast6}", fontSize = 14.sp, color = Color.DarkGray)
-                    }
+        AppBackground {
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(horizontal = 16.dp)
+            ) {
+                header?.let { h ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HistoryHeaderCard(header = h)
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-            }
 
-            if (isLoading) {
-                Text("Loading...")
-            } else if (rows.isEmpty()) {
-                Text("No payment history found.")
-            } else {
-                LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(rows) { row ->
-                        HistoryRowItem(
-                            item = row,
-                            onDeleteClick = { viewModel.confirmDelete(row) }
-                        )
-                        HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                         Text("Loading history...")
+                    }
+                } else if (rows.isEmpty()) {
+                    EmptyState(
+                        icon = Icons.Default.History,
+                        title = "No History",
+                        subtitle = "No payments recorded yet for this recurring transaction."
+                    )
+                } else {
+                    // Group rows by Month Year
+                    val groupedRows = remember(rows) {
+                        rows.groupBy { row ->
+                            // Extract "MMM yyyy" from "dd MMM yyyy"
+                            // Assumes dateText is "dd MMM yyyy"
+                            val parts = row.dateText.split(" ")
+                            if (parts.size >= 3) {
+                                "${parts[1]} ${parts[2]}"
+                            } else {
+                                "Unknown Date"
+                            }
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        groupedRows.forEach { (month, items) ->
+                            item {
+                                Text(
+                                    text = month,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                            
+                            items(items) { row ->
+                                TimelineRowItem(
+                                    item = row,
+                                    onDeleteClick = { viewModel.confirmDelete(row) }
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -147,27 +214,179 @@ fun RecurringHistoryScreen(
 }
 
 @Composable
-fun HistoryRowItem(
+fun HistoryHeaderCard(header: RecurringHistoryHeaderUiModel) {
+    val visual = CategoryVisuals.getVisual(header.categoryName)
+    SoftCard(modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(visual.containerColor),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(visual.icon, null, tint = visual.color, modifier = Modifier.size(24.dp))
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = header.recurringTitle,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${header.categoryName} • ${header.accountName}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = header.amountText,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                InfoColumn(label = "Due Rule", value = header.dueRuleText)
+                InfoColumn(
+                    label = "Status", 
+                    value = header.statusText, 
+                    valueColor = if (header.statusText.contains("Not paid", true)) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface 
+                )
+            }
+             Spacer(modifier = Modifier.height(12.dp))
+             InfoColumn(label = "Total Paid (Last 6m)", value = header.totalPaidLast6)
+        }
+    }
+}
+
+@Composable
+fun InfoColumn(label: String, value: String, valueColor: Color = MaterialTheme.colorScheme.onSurface) {
+    Column {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Medium,
+            color = valueColor
+        )
+    }
+}
+
+@Composable
+fun TimelineRowItem(
     item: RecurringHistoryRowUiModel,
     onDeleteClick: () -> Unit
 ) {
+    val visual = CategoryVisuals.getVisual(item.categoryName)
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = item.amountText, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            Text(text = "${item.dateText} • ${item.timeText}", fontSize = 14.sp)
-            Text(text = "${item.categoryName} • ${item.accountName}", fontSize = 12.sp, color = Color.Gray)
-            if (!item.note.isNullOrBlank()) {
-                Text(text = item.note, fontSize = 12.sp, color = Color.DarkGray)
-            }
+        // Timeline Column
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(24.dp)
+        ) {
+            // Top Line
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(12.dp) // Adjust based on alignment
+                    .background(visual.color.copy(alpha = 0.3f))
+            )
+            // Dot
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(visual.color)
+            )
+            // Bottom Line
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight() // This might need fixed height or weight if inside a fixed row
+                    .weight(1f, fill = false) 
+                    .background(visual.color.copy(alpha = 0.3f))
+            )
         }
-        IconButton(onClick = onDeleteClick) {
-            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray)
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(bottom = 16.dp)
+        ) {
+            SoftCard(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(visual.containerColor),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(visual.icon, null, tint = visual.color, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = item.amountText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "${item.dateText} • ${item.timeText}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                         if (!item.note.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = item.note,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                            )
+                        }
+                    }
+                    
+                    IconButton(onClick = onDeleteClick) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Delete",
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
         }
     }
 }

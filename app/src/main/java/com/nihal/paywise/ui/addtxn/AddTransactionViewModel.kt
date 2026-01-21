@@ -39,6 +39,9 @@ class AddTransactionViewModel(
         
     var selectedCategoryId by mutableStateOf<String?>(null)
         private set
+
+    var date by mutableStateOf(Instant.now())
+        private set
         
     var note by mutableStateOf("")
         private set
@@ -66,6 +69,10 @@ class AddTransactionViewModel(
         selectedCategoryId = id
     }
 
+    fun updateDate(newDate: Instant) {
+        date = newDate
+    }
+
     fun updateNote(input: String) {
         note = input
     }
@@ -89,7 +96,7 @@ class AddTransactionViewModel(
             val transaction = Transaction(
                 id = UUID.randomUUID().toString(),
                 amountPaise = amountPaise,
-                timestamp = Instant.now(),
+                timestamp = date,
                 type = TransactionType.EXPENSE,
                 accountId = selectedAccountId!!,
                 counterAccountId = null,
