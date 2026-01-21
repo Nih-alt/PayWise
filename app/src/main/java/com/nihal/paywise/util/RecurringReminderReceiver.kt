@@ -5,6 +5,11 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 
+import com.nihal.paywise.ExpenseTrackerApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+
 class RecurringReminderReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -48,5 +53,19 @@ class RecurringReminderReceiver : BroadcastReceiver() {
             yearMonth,
             reminderType
         )
+
+        // Cleanup snooze on fire
+        if (reminderType == "SNOOZED") {
+            val pendingResult = goAsync()
+            val app = context.applicationContext as ExpenseTrackerApp
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    app.container.recurringSnoozeRepository.delete(recurringId, yearMonth)
+                    Log.d("Receiver", "Snooze fired -> deleted snooze record for $recurringId")
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+        }
     }
 }

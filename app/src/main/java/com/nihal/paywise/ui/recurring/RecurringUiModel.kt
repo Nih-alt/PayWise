@@ -1,7 +1,7 @@
 package com.nihal.paywise.ui.recurring
 
 enum class RecurringDisplayStatus {
-    UPCOMING, DUE_TODAY, OVERDUE, PAID, SKIPPED
+    UPCOMING, DUE_TODAY, OVERDUE, PAID, SKIPPED, SNOOZED
 }
 
 data class RecurringUiModel(
@@ -13,5 +13,6 @@ data class RecurringUiModel(
     val categoryName: String,
     val status: RecurringDisplayStatus,
     val isPaused: Boolean,
-    val isSkipped: Boolean
+    val isSkipped: Boolean,
+    val statusDetail: String? = null
 )

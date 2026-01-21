@@ -93,10 +93,10 @@ class RecurringHistoryViewModel(
     private val startMonth = currentMonth.minusMonths(5)
     
     private val windowStart = startMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
-    private val windowEnd = currentMonth.atEndOfMonth().atTime(LocalTime.MAX).atZone(ZoneId.systemDefault()).toInstant()
+    private val windowEndExclusive = currentMonth.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
 
     val rows: StateFlow<List<RecurringHistoryRowUiModel>> = combine(
-        transactionRepository.getTransactionsForRecurringInRangeStream(recurringId, windowStart, windowEnd),
+        transactionRepository.getTransactionsForRecurringInRangeStream(recurringId, windowStart, windowEndExclusive),
         accountRepository.getAllAccountsStream(),
         categoryRepository.getAllCategoriesStream()
     ) { txs, accounts, categories ->
@@ -123,7 +123,7 @@ class RecurringHistoryViewModel(
 
     val header: StateFlow<RecurringHistoryHeaderUiModel?> = combine(
         recurringRepository.getAllRecurringStream().map { list -> list.find { it.id == recurringId } },
-        transactionRepository.getTransactionsForRecurringInRangeStream(recurringId, windowStart, windowEnd),
+        transactionRepository.getTransactionsForRecurringInRangeStream(recurringId, windowStart, windowEndExclusive),
         accountRepository.getAllAccountsStream(),
         categoryRepository.getAllCategoriesStream()
     ) { recurring, txs, accounts, categories ->
@@ -133,6 +133,8 @@ class RecurringHistoryViewModel(
         val categoryMap = categories.associate { it.id to it.name }
         
         val totalPaise = txs.sumOf { it.amountPaise }
+        
+        // Do not use lastPostedYearMonth for paid status; it can get stale if user deletes payments.
         val hasPaidThisMonth = txs.any { 
             val ym = YearMonth.from(it.timestamp.atZone(ZoneId.systemDefault()))
             ym == currentMonth 

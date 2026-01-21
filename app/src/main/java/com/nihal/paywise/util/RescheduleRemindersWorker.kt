@@ -5,6 +5,9 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.nihal.paywise.ExpenseTrackerApp
+import kotlinx.coroutines.flow.first
+import java.time.Instant
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.ZoneId
 
@@ -21,6 +24,9 @@ class RescheduleRemindersWorker(
         return try {
             val currentMonth = YearMonth.now(ZoneId.systemDefault())
             val currentMonthStr = currentMonth.toString()
+            val zoneId = ZoneId.systemDefault()
+            val monthStart = currentMonth.atDay(1).atStartOfDay(zoneId).toInstant()
+            val monthEndExclusive = currentMonth.plusMonths(1).atDay(1).atStartOfDay(zoneId).toInstant()
 
             // 1. Fetch data needed for scheduling
             val activeRecurrings = container.recurringRepository.getActiveRecurring()
@@ -28,20 +34,23 @@ class RescheduleRemindersWorker(
             val skippedIds = skippedEntities.map { it.recurringId }.toSet()
             val snoozeEntities = container.recurringSnoozeRepository.getForYearMonth(currentMonthStr)
             val snoozeMap = snoozeEntities.associate { it.recurringId to it.snoozedUntilEpochMillis }
+            
+            // Fetch paid IDs
+            val transactions = container.transactionRepository.getTransactionsBetweenStream(monthStart, monthEndExclusive).first()
+            val paidIds = transactions.mapNotNull { it.recurringId }.toSet()
 
-            Log.d("RescheduleWorker", "Processing ${activeRecurrings.size} recurring items for $currentMonthStr")
-            Log.d("RescheduleWorker", "Found ${skippedIds.size} skips and ${snoozeMap.size} active snoozes")
+            Log.d("RescheduleWorker", "Processing ${activeRecurrings.size} items. Skips: ${skippedIds.size}, Snoozes: ${snoozeMap.size}, Paid: ${paidIds.size}")
 
-            // 2. Run Auto-Post (Check if any due today need posting)
+            // 2. Run Auto-Post
             container.runRecurringAutoPostUseCase()
-            Log.d("RescheduleWorker", "Auto-post check complete")
 
             // 3. Reschedule Reminders
             container.recurringReminderScheduler.scheduleForYearMonth(
-                currentMonth,
-                activeRecurrings,
-                skippedIds,
-                snoozeMap
+                yearMonth = currentMonth,
+                recurrings = activeRecurrings,
+                skippedIds = skippedIds,
+                snoozes = snoozeMap,
+                paidIds = paidIds
             )
             Log.d("RescheduleWorker", "Rescheduling complete")
 

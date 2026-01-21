@@ -63,6 +63,7 @@ fun RecurringListScreen(
     viewModel: RecurringListViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val recurringItems by viewModel.recurringList.collectAsState()
+    val displayMonth by viewModel.displayMonth.collectAsState()
     val itemToConfirm = viewModel.itemToConfirm
     val confirmationType = viewModel.confirmationType
     val snackbarHostState = remember { SnackbarHostState() }
@@ -97,6 +98,7 @@ fun RecurringListScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 checkNotificationStatus()
+                viewModel.refreshCurrentMonth()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -131,7 +133,7 @@ fun RecurringListScreen(
                             Text("Amount: ${itemToConfirm.amountText}", fontWeight = FontWeight.Bold)
                             Text("From: ${itemToConfirm.accountName}")
                             Text("Category: ${itemToConfirm.categoryName}")
-                            Text("For: ${viewModel.displayMonth}")
+                            Text("For: $displayMonth")
                         }
                     },
                     confirmButton = {
@@ -157,7 +159,7 @@ fun RecurringListScreen(
                     onDismissRequest = { viewModel.dismissConfirmDialog() },
                     title = { Text("Skip this month?") },
                     text = {
-                         Text("This will stop auto-post and reminders for ${viewModel.displayMonth} only.")
+                         Text("This will stop auto-post and reminders for $displayMonth only.")
                     },
                     confirmButton = {
                         TextButton(
@@ -310,7 +312,7 @@ fun RecurringItemRow(
             )
             
             Text(
-                text = item.status.name,
+                text = item.statusDetail ?: item.status.name,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
                 color = when (item.status) {
@@ -318,6 +320,7 @@ fun RecurringItemRow(
                     RecurringDisplayStatus.OVERDUE -> Color.Red
                     RecurringDisplayStatus.DUE_TODAY -> Color(0xFFFFA000)
                     RecurringDisplayStatus.UPCOMING -> Color(0xFF2196F3)
+                    RecurringDisplayStatus.SNOOZED -> Color(0xFF2196F3)
                     RecurringDisplayStatus.SKIPPED -> Color.Gray
                 }
             )

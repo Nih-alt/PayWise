@@ -28,7 +28,7 @@ class OfflineTransactionRepository(private val transactionDao: TransactionDao) :
         transactionDao.getById(id)?.toDomain()
 
     override suspend fun hasTransactionForRecurringInRange(recurringId: String, start: Instant, end: Instant): Boolean {
-        return transactionDao.getByRecurringAndRange(recurringId, start, end).isNotEmpty()
+        return transactionDao.getByRecurringAndRange(recurringId, start, end) != null
     }
 
     override suspend fun existsRecurringTransactionInYearMonth(recurringId: String, start: Instant, end: Instant): Boolean {
