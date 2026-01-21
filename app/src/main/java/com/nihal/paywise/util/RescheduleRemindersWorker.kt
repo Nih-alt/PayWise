@@ -6,6 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.nihal.paywise.ExpenseTrackerApp
 import java.time.YearMonth
+import java.time.ZoneId
 
 class RescheduleRemindersWorker(
     context: Context,
@@ -13,20 +14,41 @@ class RescheduleRemindersWorker(
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
-        Log.d("RescheduleWorker", "Starting reminder rescheduling after boot")
+        Log.d("RescheduleWorker", "Starting daily/boot work for recurring transactions")
         val app = applicationContext as ExpenseTrackerApp
         val container = app.container
         
-        val activeRecurring = container.recurringRepository.getActiveRecurring()
-        val scheduler = container.recurringReminderScheduler
-        val currentMonth = YearMonth.now()
+        return try {
+            val currentMonth = YearMonth.now(ZoneId.systemDefault())
+            val currentMonthStr = currentMonth.toString()
 
-        Log.d("RescheduleWorker", "Found ${activeRecurring.size} active recurring items to reschedule")
-        activeRecurring.forEach { recurring ->
-            scheduler.scheduleReminders(recurring, currentMonth)
+            // 1. Fetch data needed for scheduling
+            val activeRecurrings = container.recurringRepository.getActiveRecurring()
+            val skippedEntities = container.recurringSkipRepository.getSkipsForYearMonth(currentMonthStr)
+            val skippedIds = skippedEntities.map { it.recurringId }.toSet()
+            val snoozeEntities = container.recurringSnoozeRepository.getForYearMonth(currentMonthStr)
+            val snoozeMap = snoozeEntities.associate { it.recurringId to it.snoozedUntilEpochMillis }
+
+            Log.d("RescheduleWorker", "Processing ${activeRecurrings.size} recurring items for $currentMonthStr")
+            Log.d("RescheduleWorker", "Found ${skippedIds.size} skips and ${snoozeMap.size} active snoozes")
+
+            // 2. Run Auto-Post (Check if any due today need posting)
+            container.runRecurringAutoPostUseCase()
+            Log.d("RescheduleWorker", "Auto-post check complete")
+
+            // 3. Reschedule Reminders
+            container.recurringReminderScheduler.scheduleForYearMonth(
+                currentMonth,
+                activeRecurrings,
+                skippedIds,
+                snoozeMap
+            )
+            Log.d("RescheduleWorker", "Rescheduling complete")
+
+            Result.success()
+        } catch (e: Exception) {
+            Log.e("RescheduleWorker", "Error in RescheduleRemindersWorker", e)
+            Result.retry()
         }
-
-        Log.d("RescheduleWorker", "Successfully finished rescheduling")
-        return Result.success()
     }
 }

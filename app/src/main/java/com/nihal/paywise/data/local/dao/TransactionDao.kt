@@ -44,6 +44,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE recurringId = :recurringId ORDER BY timestamp DESC LIMIT :limit")
     fun observeRecentTransactionsForRecurring(recurringId: String, limit: Int): Flow<List<TransactionEntity>>
 
+    @Query("SELECT EXISTS(SELECT 1 FROM transactions WHERE recurringId = :recurringId AND timestamp >= :start AND timestamp < :end)")
+    suspend fun existsRecurringTransactionInYearMonth(recurringId: String, start: Instant, end: Instant): Boolean
+
     @Query("DELETE FROM transactions WHERE id = :transactionId")
     suspend fun deleteById(transactionId: String)
 }

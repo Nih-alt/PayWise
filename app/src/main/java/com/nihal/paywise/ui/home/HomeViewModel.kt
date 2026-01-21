@@ -7,9 +7,10 @@ import com.nihal.paywise.data.repository.CategoryRepository
 import com.nihal.paywise.data.repository.RecurringRepository
 import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.model.TransactionType
-import com.nihal.paywise.domain.usecase.RecurringAutoPostUseCase
+import com.nihal.paywise.domain.usecase.RunRecurringAutoPostUseCase
 import com.nihal.paywise.util.DateTimeFormatterUtil
 import com.nihal.paywise.util.MoneyFormatter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -35,15 +36,14 @@ class HomeViewModel(
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
     private val recurringRepository: RecurringRepository,
-    private val recurringAutoPostUseCase: RecurringAutoPostUseCase
+    private val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase
 ) : ViewModel() {
 
     private val currentMonthRange = calculateCurrentMonthRange()
 
     init {
-        viewModelScope.launch {
-            val activeRecurring = recurringRepository.getAllRecurringStream().first()
-            recurringAutoPostUseCase.execute(YearMonth.now(), activeRecurring)
+        viewModelScope.launch(Dispatchers.IO) {
+            runRecurringAutoPostUseCase()
         }
     }
 

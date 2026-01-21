@@ -12,6 +12,7 @@ interface TransactionRepository {
     fun getTransactionsForRecurringInRangeStream(recurringId: String, start: Instant, end: Instant): Flow<List<Transaction>>
     suspend fun getTransactionById(id: String): Transaction?
     suspend fun hasTransactionForRecurringInRange(recurringId: String, start: Instant, end: Instant): Boolean
+    suspend fun existsRecurringTransactionInYearMonth(recurringId: String, start: Instant, end: Instant): Boolean
     suspend fun getLatestTransactionForRecurring(recurringId: String): Transaction?
     suspend fun insertTransaction(transaction: Transaction)
     suspend fun deleteTransaction(transaction: Transaction)

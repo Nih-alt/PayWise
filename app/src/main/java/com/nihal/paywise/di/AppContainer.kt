@@ -11,23 +11,30 @@ import com.nihal.paywise.data.repository.OfflineTransactionRepository
 import com.nihal.paywise.data.repository.RecurringRepository
 import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.usecase.MarkRecurringAsPaidUseCase
-import com.nihal.paywise.domain.usecase.RecurringAutoPostUseCase
+import com.nihal.paywise.domain.usecase.RunRecurringAutoPostUseCase
 import com.nihal.paywise.domain.usecase.SkipRecurringForMonthUseCase
 import com.nihal.paywise.domain.usecase.UndoMarkRecurringAsPaidUseCase
 import com.nihal.paywise.domain.usecase.DeleteRecurringTransactionUseCase
 import com.nihal.paywise.domain.usecase.SyncRecurringLastPostedMonthUseCase
 import com.nihal.paywise.util.RecurringReminderScheduler
 
+import com.nihal.paywise.data.repository.OfflineRecurringSkipRepository
+import com.nihal.paywise.data.repository.RecurringSkipRepository
+import com.nihal.paywise.data.repository.OfflineRecurringSnoozeRepository
+import com.nihal.paywise.data.repository.RecurringSnoozeRepository
+
 interface AppContainer {
     val accountRepository: AccountRepository
     val categoryRepository: CategoryRepository
     val transactionRepository: TransactionRepository
     val recurringRepository: RecurringRepository
+    val recurringSkipRepository: RecurringSkipRepository
+    val recurringSnoozeRepository: RecurringSnoozeRepository
     val recurringReminderScheduler: RecurringReminderScheduler
     val markRecurringAsPaidUseCase: MarkRecurringAsPaidUseCase
     val undoMarkRecurringAsPaidUseCase: UndoMarkRecurringAsPaidUseCase
     val skipRecurringForMonthUseCase: SkipRecurringForMonthUseCase
-    val recurringAutoPostUseCase: RecurringAutoPostUseCase
+    val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase
     val deleteRecurringTransactionUseCase: DeleteRecurringTransactionUseCase
     val syncRecurringLastPostedMonthUseCase: SyncRecurringLastPostedMonthUseCase
 }
@@ -51,8 +58,16 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
         OfflineRecurringRepository(database.recurringDao())
     }
 
+    override val recurringSkipRepository: RecurringSkipRepository by lazy {
+        OfflineRecurringSkipRepository(database.recurringSkipDao())
+    }
+
+    override val recurringSnoozeRepository: RecurringSnoozeRepository by lazy {
+        OfflineRecurringSnoozeRepository(database.recurringSnoozeDao())
+    }
+
     override val recurringReminderScheduler: RecurringReminderScheduler by lazy {
-        RecurringReminderScheduler(context)
+        RecurringReminderScheduler(context, recurringSnoozeRepository)
     }
 
     override val markRecurringAsPaidUseCase: MarkRecurringAsPaidUseCase by lazy {
@@ -64,11 +79,11 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val skipRecurringForMonthUseCase: SkipRecurringForMonthUseCase by lazy {
-        SkipRecurringForMonthUseCase(recurringRepository)
+        SkipRecurringForMonthUseCase(recurringSkipRepository)
     }
 
-    override val recurringAutoPostUseCase: RecurringAutoPostUseCase by lazy {
-        RecurringAutoPostUseCase(transactionRepository, recurringRepository)
+    override val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase by lazy {
+        RunRecurringAutoPostUseCase(transactionRepository, recurringRepository, recurringSkipRepository)
     }
 
     override val syncRecurringLastPostedMonthUseCase: SyncRecurringLastPostedMonthUseCase by lazy {

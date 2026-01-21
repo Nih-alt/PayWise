@@ -37,6 +37,23 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
 import kotlinx.coroutines.flow.collectLatest
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
 fun RecurringListScreen(
@@ -47,9 +64,49 @@ fun RecurringListScreen(
 ) {
     val recurringItems by viewModel.recurringList.collectAsState()
     val itemToConfirm = viewModel.itemToConfirm
+    val confirmationType = viewModel.confirmationType
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    var isNotificationPermissionMissing by remember { mutableStateOf(false) }
+    var areSystemNotificationsDisabled by remember { mutableStateOf(false) }
+
+    fun checkNotificationStatus() {
+        val notificationManager = NotificationManagerCompat.from(context)
+        val areEnabled = notificationManager.areNotificationsEnabled()
+        areSystemNotificationsDisabled = !areEnabled
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            val hasPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+            isNotificationPermissionMissing = !hasPermission
+        } else {
+            isNotificationPermissionMissing = false
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { checkNotificationStatus() }
+    )
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                checkNotificationStatus()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
+        checkNotificationStatus()
         viewModel.undoEvent.collectLatest { (txId, recurringId) ->
             val result = snackbarHostState.showSnackbar(
                 message = "Marked paid",
@@ -63,35 +120,65 @@ fun RecurringListScreen(
     }
 
     if (itemToConfirm != null) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissConfirmDialog() },
-            title = { Text("Confirm payment") },
-            text = {
-                Column {
-                    Text("Pay ${itemToConfirm.title}?")
-                    Text("Amount: ${itemToConfirm.amountText}", fontWeight = FontWeight.Bold)
-                    Text("From: ${itemToConfirm.accountName}")
-                    Text("Category: ${itemToConfirm.categoryName}")
-                    Text("For: ${viewModel.displayMonth}")
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { viewModel.markAsPaid(itemToConfirm.id) },
-                    enabled = !viewModel.isSaving
-                ) {
-                    Text("Confirm")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { viewModel.dismissConfirmDialog() },
-                    enabled = !viewModel.isSaving
-                ) {
-                    Text("Cancel")
-                }
+        when (confirmationType) {
+            RecurringListViewModel.ConfirmationType.PAID -> {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissConfirmDialog() },
+                    title = { Text("Confirm payment") },
+                    text = {
+                        Column {
+                            Text("Pay ${itemToConfirm.title}?")
+                            Text("Amount: ${itemToConfirm.amountText}", fontWeight = FontWeight.Bold)
+                            Text("From: ${itemToConfirm.accountName}")
+                            Text("Category: ${itemToConfirm.categoryName}")
+                            Text("For: ${viewModel.displayMonth}")
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { viewModel.markAsPaid(itemToConfirm.id) },
+                            enabled = !viewModel.isSaving
+                        ) {
+                            Text("Confirm")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { viewModel.dismissConfirmDialog() },
+                            enabled = !viewModel.isSaving
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
             }
-        )
+            RecurringListViewModel.ConfirmationType.SKIP -> {
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissConfirmDialog() },
+                    title = { Text("Skip this month?") },
+                    text = {
+                         Text("This will stop auto-post and reminders for ${viewModel.displayMonth} only.")
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = { viewModel.skipThisMonth(itemToConfirm.id) },
+                            enabled = !viewModel.isSaving
+                        ) {
+                            Text("Skip")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { viewModel.dismissConfirmDialog() },
+                            enabled = !viewModel.isSaving
+                        ) {
+                            Text("Cancel")
+                        }
+                    }
+                )
+            }
+            else -> {}
+        }
     }
 
     Scaffold(
@@ -108,6 +195,31 @@ fun RecurringListScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
+            if (isNotificationPermissionMissing || areSystemNotificationsDisabled) {
+                Button(
+                    onClick = {
+                        if (isNotificationPermissionMissing) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    data = Uri.fromParts("package", context.packageName, null)
+                                }
+                                context.startActivity(settingsIntent)
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                ) {
+                    Text("Enable Notifications")
+                }
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -128,6 +240,10 @@ fun RecurringListScreen(
                         RecurringItemRow(
                             item = item,
                             onPaidClick = { viewModel.showConfirmDialog(item) },
+                            onSkipClick = { 
+                                if (item.isSkipped) viewModel.unskipThisMonth(item.id)
+                                else viewModel.showSkipConfirmDialog(item)
+                            },
                             onToggleStatus = { viewModel.toggleStatus(item.id) },
                             onHistoryClick = { onHistoryClick(item.id) },
                             isSaving = viewModel.isSaving
@@ -144,6 +260,7 @@ fun RecurringListScreen(
 fun RecurringItemRow(
     item: RecurringUiModel,
     onPaidClick: () -> Unit,
+    onSkipClick: () -> Unit,
     onToggleStatus: () -> Unit,
     onHistoryClick: () -> Unit,
     isSaving: Boolean
@@ -201,6 +318,7 @@ fun RecurringItemRow(
                     RecurringDisplayStatus.OVERDUE -> Color.Red
                     RecurringDisplayStatus.DUE_TODAY -> Color(0xFFFFA000)
                     RecurringDisplayStatus.UPCOMING -> Color(0xFF2196F3)
+                    RecurringDisplayStatus.SKIPPED -> Color.Gray
                 }
             )
         }
@@ -214,11 +332,27 @@ fun RecurringItemRow(
         ) {
             Button(
                 onClick = onPaidClick,
-                enabled = item.status != RecurringDisplayStatus.PAID && !item.isPaused && !isSaving,
+                enabled = item.status != RecurringDisplayStatus.PAID && item.status != RecurringDisplayStatus.SKIPPED && !item.isPaused && !isSaving,
                 modifier = Modifier.weight(1f)
             ) {
                 Text("Mark Paid")
             }
+            
+            OutlinedButton(
+                onClick = onSkipClick,
+                enabled = !isSaving,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (item.isSkipped) "Unskip" else "Skip")
+            }
+        }
+        
+        Row(
+             modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
                 onClick = onToggleStatus,
                 enabled = !isSaving,

@@ -21,7 +21,7 @@ object AppViewModelProvider {
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository,
                 inventoryApplication().container.recurringRepository,
-                inventoryApplication().container.recurringAutoPostUseCase
+                inventoryApplication().container.runRecurringAutoPostUseCase
             )
         }
         initializer {
@@ -37,6 +37,9 @@ object AppViewModelProvider {
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository,
+                inventoryApplication().container.recurringSkipRepository,
+                inventoryApplication().container.recurringSnoozeRepository,
+                inventoryApplication().container.recurringReminderScheduler,
                 inventoryApplication().container.markRecurringAsPaidUseCase,
                 inventoryApplication().container.undoMarkRecurringAsPaidUseCase,
                 inventoryApplication().container.skipRecurringForMonthUseCase

@@ -13,6 +13,10 @@ import com.nihal.paywise.data.local.dao.RecurringDao
 import com.nihal.paywise.data.local.dao.TransactionDao
 import com.nihal.paywise.data.local.entity.AccountEntity
 import com.nihal.paywise.data.local.entity.CategoryEntity
+import com.nihal.paywise.data.local.dao.RecurringSnoozeDao
+import com.nihal.paywise.data.local.entity.RecurringSnoozeEntity
+import com.nihal.paywise.data.local.dao.RecurringSkipDao
+import com.nihal.paywise.data.local.entity.RecurringSkipEntity
 import com.nihal.paywise.data.local.entity.RecurringEntity
 import com.nihal.paywise.data.local.entity.TransactionEntity
 
@@ -21,9 +25,11 @@ import com.nihal.paywise.data.local.entity.TransactionEntity
         AccountEntity::class,
         CategoryEntity::class,
         TransactionEntity::class,
-        RecurringEntity::class
+        RecurringEntity::class,
+        RecurringSkipEntity::class,
+        RecurringSnoozeEntity::class
     ],
-    version = 2,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(PayWiseConverters::class)
@@ -32,6 +38,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun transactionDao(): TransactionDao
     abstract fun recurringDao(): RecurringDao
+    abstract fun recurringSkipDao(): RecurringSkipDao
+    abstract fun recurringSnoozeDao(): RecurringSnoozeDao
 
     companion object {
         @Volatile
@@ -62,10 +70,41 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `recurring_skips` (
+                        `id` TEXT NOT NULL,
+                        `recurringId` TEXT NOT NULL,
+                        `yearMonth` TEXT NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `recurring_snoozes` (
+                        `id` TEXT NOT NULL,
+                        `recurringId` TEXT NOT NULL,
+                        `yearMonth` TEXT NOT NULL,
+                        `snoozedUntilEpochMillis` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "expense_tracker.db")
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { Instance = it }
             }

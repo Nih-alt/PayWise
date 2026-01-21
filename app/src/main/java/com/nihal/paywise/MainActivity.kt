@@ -10,8 +10,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val navTarget = intent.getStringExtra("nav_target")
         setContent {
-            PayWiseApp()
+            PayWiseApp(navTarget = navTarget)
         }
     }
 }
