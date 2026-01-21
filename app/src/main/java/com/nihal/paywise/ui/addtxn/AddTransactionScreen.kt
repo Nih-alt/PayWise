@@ -48,7 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -71,6 +73,7 @@ fun AddTransactionScreen(
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     
     // Bottom Sheet States
     var showAccountSheet by remember { mutableStateOf(false) }
@@ -196,6 +199,7 @@ fun AddTransactionScreen(
                             
                             Button(
                                 onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     viewModel.saveTransaction(onSuccess = navigateBack)
                                 },
                                 enabled = viewModel.canSave,

@@ -92,6 +92,9 @@ class RecurringListViewModel(
     private val _currentMonth = MutableStateFlow(YearMonth.now(ZoneId.systemDefault()))
     val currentMonthFlow = _currentMonth.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     fun refreshCurrentMonth() {
         val nowYm = YearMonth.now(ZoneId.systemDefault())
         if (_currentMonth.value != nowYm) {
@@ -198,6 +201,7 @@ class RecurringListViewModel(
     }
 
     val recurringList: StateFlow<List<RecurringUiModel>> = monthWindowFlow.flatMapLatest { (currentMonth, monthStart, monthEndExclusive) ->
+        _isLoading.value = true // Set loading to true before data is fetched
         combine(
             recurringRepository.getAllRecurringStream(),
             transactionRepository.getTransactionsBetweenStream(monthStart, monthEndExclusive),
@@ -225,6 +229,8 @@ class RecurringListViewModel(
             val accountMap = accounts.associate { it.id to it.name }
             val categoryMap = categories.associate { it.id to it.name }
             val today = LocalDate.now(ZoneId.systemDefault())
+
+            _isLoading.value = false // Set loading to false after data is processed
 
             recurringItems.map { item ->
                 // Do not use lastPostedYearMonth for paid status; it can get stale if user deletes payments.

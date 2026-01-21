@@ -27,6 +27,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -43,6 +45,7 @@ fun AddRecurringScreen(
 ) {
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = modifier
@@ -200,7 +203,10 @@ fun AddRecurringScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Button(
-            onClick = { viewModel.saveRecurring(onSuccess = navigateBack) },
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                viewModel.saveRecurring(onSuccess = navigateBack)
+            },
             enabled = viewModel.canSave,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp)
         ) {

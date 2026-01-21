@@ -1,6 +1,8 @@
 package com.nihal.paywise.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -168,7 +170,7 @@ fun HeroCard(month: String, totalSpent: String) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
-                    Text("₹ --", style = MaterialTheme.typography.titleSmall)
+                    Text("--", style = MaterialTheme.typography.titleSmall)
                 }
                 Column {
                     Text(
@@ -176,7 +178,7 @@ fun HeroCard(month: String, totalSpent: String) {
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
-                    Text("₹ --", style = MaterialTheme.typography.titleSmall)
+                    Text("--", style = MaterialTheme.typography.titleSmall)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -191,51 +193,61 @@ fun HeroCard(month: String, totalSpent: String) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun QuickActionsRow(onAddExpense: () -> Unit, onRecurring: () -> Unit) {
-    LazyRow(
+    val configuration = LocalConfiguration.current
+    val screenWidthDp = configuration.screenWidthDp
+
+    val maxItems = when {
+        screenWidthDp < 360 -> 1
+        screenWidthDp < 600 -> 2
+        else -> 3
+    }
+
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = PaddingValues(vertical = 8.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        maxItemsInEachRow = maxItems
     ) {
-        item {
-            ActionChip(
-                icon = Icons.Default.Add,
-                label = "Expense",
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                onClick = onAddExpense
-            )
-        }
-        item {
-            ActionChip(
-                icon = Icons.Default.KeyboardArrowDown, // Income usually goes down (or up depending on mental model), arrow down often means 'in' to wallet
-                label = "Income",
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                badge = "Soon",
-                enabled = false,
-                onClick = {}
-            )
-        }
-        item {
-            ActionChip(
-                icon = Icons.AutoMirrored.Filled.ArrowForward,
-                label = "Transfer",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-                enabled = false,
-                onClick = {}
-            )
-        }
-        item {
-            ActionChip(
-                icon = Icons.Default.Refresh,
-                label = "Recurring",
-                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                onClick = onRecurring
-            )
-        }
+        val itemModifier = Modifier.weight(1f) // Makes each item fill available width within its column
+
+        ActionChip(
+            icon = Icons.Default.Add,
+            label = "Expense",
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            onClick = onAddExpense,
+            modifier = itemModifier
+        )
+        ActionChip(
+            icon = Icons.Default.KeyboardArrowDown,
+            label = "Income",
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            badge = "Soon",
+            enabled = false,
+            onClick = {},
+            modifier = itemModifier
+        )
+        ActionChip(
+            icon = Icons.AutoMirrored.Filled.ArrowForward,
+            label = "Transfer",
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            enabled = false,
+            onClick = {},
+            modifier = itemModifier
+        )
+        ActionChip(
+            icon = Icons.Default.Refresh,
+            label = "Recurring",
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            onClick = onRecurring,
+            modifier = itemModifier
+        )
     }
 }
 
@@ -247,7 +259,8 @@ fun ActionChip(
     contentColor: Color,
     onClick: () -> Unit,
     badge: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
@@ -255,7 +268,7 @@ fun ActionChip(
         color = if (enabled) containerColor else containerColor.copy(alpha = 0.5f),
         contentColor = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
         shape = MaterialTheme.shapes.large,
-        modifier = Modifier.height(48.dp)
+        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -292,7 +305,7 @@ fun CategorySummaryRow(categories: List<CategorySummaryUiModel>) {
             ) {
                 Text(category.name, style = MaterialTheme.typography.labelMedium, maxLines = 1)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("₹${category.totalAmount}", style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
+                Text(category.totalAmount, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
                     progress = { category.progress },
@@ -345,7 +358,7 @@ fun TransactionRowItem(transaction: HomeTransactionUiModel) {
         }
 
         Text(
-            text = (if (transaction.type == TransactionType.EXPENSE) "-" else "+") + "₹" + transaction.amountText,
+            text = (if (transaction.type == TransactionType.EXPENSE) "-" else "+") + transaction.amountText,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = when (transaction.type) {

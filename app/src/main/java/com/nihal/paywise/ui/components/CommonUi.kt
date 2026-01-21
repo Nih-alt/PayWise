@@ -92,12 +92,6 @@ fun AmountText(
         verticalAlignment = Alignment.Bottom
     ) {
         Text(
-            text = "₹",
-            style = MaterialTheme.typography.titleMedium,
-            color = color.copy(alpha = 0.8f),
-            modifier = Modifier.padding(bottom = 2.dp, end = 2.dp)
-        )
-        Text(
             text = amount,
             style = MaterialTheme.typography.displayLarge.copy(fontSize = 32.sp),
             color = color,

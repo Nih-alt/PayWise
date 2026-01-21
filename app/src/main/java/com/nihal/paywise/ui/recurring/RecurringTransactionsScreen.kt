@@ -53,11 +53,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.ui.components.AppBackground
+import androidx.compose.foundation.ExperimentalFoundationApi
 import com.nihal.paywise.ui.components.EmptyState
+import com.nihal.paywise.ui.components.ShimmerLoadingListItem
 import com.nihal.paywise.ui.components.SoftCard
 import com.nihal.paywise.ui.util.CategoryVisuals
 import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecurringHistoryScreen(
     navigateBack: () -> Unit,
@@ -159,14 +162,20 @@ fun RecurringHistoryScreen(
                 }
 
                 if (isLoading) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                         Text("Loading history...")
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(bottom = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(3) { // Show 3 shimmer items as a placeholder
+                            ShimmerLoadingListItem()
+                        }
                     }
                 } else if (rows.isEmpty()) {
                     EmptyState(
                         icon = Icons.Default.History,
-                        title = "No History",
-                        subtitle = "No payments recorded yet for this recurring transaction."
+                        contentDescription = "No History",
+                        message = "No payments recorded yet for this recurring transaction."
                     )
                 } else {
                     // Group rows by Month Year
@@ -189,20 +198,23 @@ fun RecurringHistoryScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         groupedRows.forEach { (month, items) ->
-                            item {
+                            item(key = month) { // Add key for animateItemPlacement
                                 Text(
                                     text = month,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(bottom = 8.dp)
+                                    modifier = Modifier
+                                        .padding(bottom = 8.dp)
+                                        .animateItemPlacement() // Animate the header
                                 )
                             }
                             
-                            items(items) { row ->
+                            items(items, key = { it.transactionId }) { row ->
                                 TimelineRowItem(
                                     item = row,
-                                    onDeleteClick = { viewModel.confirmDelete(row) }
+                                    onDeleteClick = { viewModel.confirmDelete(row) },
+                                    modifier = Modifier.animateItemPlacement()
                                 )
                             }
                         }
@@ -294,11 +306,12 @@ fun InfoColumn(label: String, value: String, valueColor: Color = MaterialTheme.c
 @Composable
 fun TimelineRowItem(
     item: RecurringHistoryRowUiModel,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val visual = CategoryVisuals.getVisual(item.categoryName)
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
         // Timeline Column

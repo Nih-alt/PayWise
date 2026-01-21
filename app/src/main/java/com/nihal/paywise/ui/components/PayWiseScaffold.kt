@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -62,7 +64,10 @@ fun PayWiseScaffold(
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
                             "PayWise",
                             style = MaterialTheme.typography.titleLarge,
@@ -82,6 +87,7 @@ fun PayWiseScaffold(
                                 shape = MaterialTheme.shapes.extraLarge
                             )
                         }
+                        Spacer(Modifier.weight(1f)) // Pushes content to the start
                     }
                 },
                 actions = {
@@ -111,7 +117,7 @@ fun PayWiseScaffold(
                     val items = listOf(
                         Triple("home", "Home", Icons.Default.Home),
                         Triple("recurring_list", "Recurring", Icons.AutoMirrored.Filled.List),
-                        Triple("reports", "Reports", Icons.Default.List),
+                        Triple("reports", "Reports", Icons.AutoMirrored.Filled.List),
                         Triple("settings", "Profile", Icons.Default.Settings)
                     )
 
@@ -155,8 +161,8 @@ fun PayWiseScaffold(
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     shape = MaterialTheme.shapes.large,
                     icon = { Icon(Icons.Default.Add, "Add") },
-                    text = { 
-                        Text(if (currentRoute == "home") "Add Expense" else "New Rule") 
+                    text = {
+                        Text(if (currentRoute == "home") "Add Expense" else "New Rule")
                     }
                 )
             }

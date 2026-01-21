@@ -8,6 +8,9 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -69,10 +72,14 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.ui.components.AppBackground
+import androidx.compose.material.icons.filled.Info
+import com.nihal.paywise.ui.components.EmptyState
+import com.nihal.paywise.ui.components.ShimmerLoadingListItem
 import com.nihal.paywise.ui.components.SoftCard
 import com.nihal.paywise.ui.util.CategoryVisuals
 import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecurringListScreen(
     snackbarHostState: SnackbarHostState,
@@ -87,6 +94,7 @@ fun RecurringListScreen(
     val confirmationType = viewModel.confirmationType
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val isLoading by viewModel.isLoading.collectAsState()
 
     var isNotificationPermissionMissing by remember { mutableStateOf(false) }
     var areSystemNotificationsDisabled by remember { mutableStateOf(false) }
@@ -249,43 +257,42 @@ fun RecurringListScreen(
                             recurringItems = recurringItems,
                             displayMonth = displayMonth
                         )
-                    }
-
-                    if (recurringItems.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "No recurring transactions found.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                        }
+                    
+                                        if (isLoading) {
+                                            items(3) {
+                                                ShimmerLoadingListItem()
+                                            }
+                                        } else if (recurringItems.isEmpty()) {
+                                            item {
+                                                EmptyState(
+                                                    icon = Icons.Default.Info,
+                                                    contentDescription = "No recurring transactions",
+                                                    message = "No recurring transactions found for $displayMonth. Add one to get started!",
+                                                    modifier = Modifier.padding(top = 64.dp)
+                                                )
+                                            }
+                                        } else {
+                                            items(recurringItems, key = { it.id }) { item ->
+                                                RecurringItemCard(
+                                                    item = item,
+                                                    onPaidClick = { viewModel.showConfirmDialog(item) },
+                                                    onSkipClick = {
+                                                        if (item.isSkipped) viewModel.unskipThisMonth(item.id)
+                                                        else viewModel.showSkipConfirmDialog(item)
+                                                    },
+                                                    onToggleStatus = { viewModel.toggleStatus(item.id) },
+                                                    onHistoryClick = { onHistoryClick(item.id) },
+                                                    isSaving = viewModel.isSaving,
+                                                    modifier = Modifier.animateItemPlacement()
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                    } else {
-                        items(recurringItems) { item ->
-                            RecurringItemCard(
-                                item = item,
-                                onPaidClick = { viewModel.showConfirmDialog(item) },
-                                onSkipClick = { 
-                                    if (item.isSkipped) viewModel.unskipThisMonth(item.id)
-                                    else viewModel.showSkipConfirmDialog(item)
-                                },
-                                onToggleStatus = { viewModel.toggleStatus(item.id) },
-                                onHistoryClick = { onHistoryClick(item.id) },
-                                isSaving = viewModel.isSaving
-                            )
-                        }
                     }
-                }
-            }
-        }
-    }
-}
 
 @Composable
 fun RecurringHeaderCard(
@@ -361,10 +368,19 @@ fun StatusSummaryChip(
     color: Color,
     modifier: Modifier = Modifier
 ) {
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = color.copy(alpha = 0.1f),
+        animationSpec = tween(durationMillis = 300), label = "SummaryChipBackgroundColor"
+    )
+    val animatedTextColor by animateColorAsState(
+        targetValue = color,
+        animationSpec = tween(durationMillis = 300), label = "SummaryChipTextColor"
+    )
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.1f))
+            .background(animatedBackgroundColor)
             .padding(vertical = 12.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -372,12 +388,12 @@ fun StatusSummaryChip(
             text = count.toString(),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = color
+            color = animatedTextColor
         )
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
-            color = color.copy(alpha = 0.8f)
+            color = animatedTextColor.copy(alpha = 0.8f)
         )
     }
 }
@@ -389,7 +405,8 @@ fun RecurringItemCard(
     onSkipClick: () -> Unit,
     onToggleStatus: () -> Unit,
     onHistoryClick: () -> Unit,
-    isSaving: Boolean
+    isSaving: Boolean,
+    modifier: Modifier = Modifier
 ) {
     val visual = CategoryVisuals.getVisual(item.categoryName)
     SoftCard(modifier = Modifier.fillMaxWidth()) {
@@ -513,7 +530,7 @@ fun StatusChip(
     status: RecurringDisplayStatus,
     detail: String?
 ) {
-    val (backgroundColor, textColor) = when (status) {
+    val (targetBackgroundColor, targetTextColor) = when (status) {
         RecurringDisplayStatus.PAID -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
         RecurringDisplayStatus.OVERDUE -> Color(0xFFFFEBEE) to Color(0xFFC62828)
         RecurringDisplayStatus.DUE_TODAY -> Color(0xFFFFF8E1) to Color(0xFFF57F17)
@@ -522,17 +539,26 @@ fun StatusChip(
         RecurringDisplayStatus.SKIPPED -> Color(0xFFF5F5F5) to Color(0xFF616161)
     }
 
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = targetBackgroundColor,
+        animationSpec = tween(durationMillis = 300), label = "StatusChipBackgroundColor"
+    )
+    val animatedTextColor by animateColorAsState(
+        targetValue = targetTextColor,
+        animationSpec = tween(durationMillis = 300), label = "StatusChipTextColor"
+    )
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
+            .background(animatedBackgroundColor)
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = detail ?: status.name,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            color = textColor
+            color = animatedTextColor
         )
     }
 }
