@@ -14,15 +14,19 @@ import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.navigation.NotificationNavRequest
 import com.nihal.paywise.ui.PayWiseApp
 import com.nihal.paywise.ui.onboarding.OnboardingViewModel
+import com.nihal.paywise.util.LockManager
 import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
     
     private val navRequestFlow = MutableStateFlow<NotificationNavRequest?>(null)
+    private lateinit var lockManager: LockManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
+
+        lockManager = (application as ExpenseTrackerApp).container.lockManager
         
         val onboardingViewModel: OnboardingViewModel = ViewModelProvider(this, AppViewModelProvider.Factory)[OnboardingViewModel::class.java]
         
@@ -38,12 +42,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val navRequest by navRequestFlow.collectAsState()
             val onboardingCompleted by onboardingViewModel.isOnboardingCompleted.collectAsState()
+            val isLocked by lockManager.isLocked.collectAsState()
             
             if (onboardingCompleted != null) {
                 PayWiseApp(
                     navRequest = navRequest,
                     onboardingCompleted = onboardingCompleted!!,
-                    onNavRequestHandled = { navRequestFlow.value = null }
+                    isLocked = isLocked,
+                    onNavRequestHandled = { navRequestFlow.value = null },
+                    onUnlock = { lockManager.unlock() }
                 )
             }
         }

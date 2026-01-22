@@ -11,10 +11,7 @@ import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -31,6 +28,7 @@ import java.time.Instant
 @Composable
 fun SettingsScreen(
     onImportSuccess: () -> Unit,
+    onSetPinClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -165,7 +163,107 @@ fun SettingsScreen(
                     }
                 }
                 
+                item { Spacer(Modifier.height(16.dp)) }
+
+                item {
+                    Text(
+                        "Security",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                item {
+                    SoftCard(modifier = Modifier.fillMaxWidth()) {
+                        Column {
+                            val appLockSettings by viewModel.appLockSettings.collectAsState(null)
+                            appLockSettings?.let {
+                                SwitchSetting(
+                                    title = "Enable App Lock",
+                                    checked = it.isLockEnabled,
+                                    onCheckedChange = { enabled ->
+                                        viewModel.setAppLockEnabled(enabled)
+                                    }
+                                )
+                                if (it.isLockEnabled) {
+                                    Button(onClick = onSetPinClick) {
+                                        Text(if (it.hasPin) "Change PIN" else "Set PIN")
+                                    }
+                                    SwitchSetting(
+                                        title = "Use Biometric",
+                                        checked = it.isBiometricEnabled,
+                                        onCheckedChange = { enabled ->
+                                            viewModel.setBiometricEnabled(enabled)
+                                        }
+                                    )
+                                    AutoLockDropdown(
+                                        selectedValue = it.autoLockMinutes,
+                                        onValueChange = { minutes ->
+                                            viewModel.setAutoLockMinutes(minutes)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 item { Spacer(Modifier.height(80.dp)) }
+            }
+        }
+    }
+}
+
+@Composable
+fun SwitchSetting(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(title, style = MaterialTheme.typography.bodyLarge)
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+
+@Composable
+fun AutoLockDropdown(
+    selectedValue: Int,
+    onValueChange: (Int) -> Unit
+) {
+    val items = listOf(1, 2, 5, 10)
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Auto-lock timer", style = MaterialTheme.typography.bodyLarge)
+        Box {
+            Button(onClick = { expanded = true }) {
+                Text("$selectedValue minutes")
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                items.forEach {
+                    DropdownMenuItem(
+                        text = { Text("$it minutes") },
+                        onClick = {
+                            onValueChange(it)
+                            expanded = false
+                        }
+                    )
+                }
             }
         }
     }

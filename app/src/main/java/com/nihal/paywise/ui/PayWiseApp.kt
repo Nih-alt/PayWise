@@ -18,6 +18,8 @@ import com.nihal.paywise.ui.components.PayWiseScaffold
 @Composable
 fun PayWiseApp(
     onboardingCompleted: Boolean,
+    isLocked: Boolean,
+    onUnlock: () -> Unit,
     navRequest: NotificationNavRequest? = null,
     onNavRequestHandled: () -> Unit = {}
 ) {
@@ -53,6 +55,8 @@ fun PayWiseApp(
                     snackbarHostState = snackbarHostState,
                     navRequest = navRequest,
                     onboardingCompleted = onboardingCompleted,
+                    isLocked = isLocked,
+                    onUnlock = onUnlock,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

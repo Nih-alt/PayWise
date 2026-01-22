@@ -9,6 +9,7 @@ import com.nihal.paywise.ExpenseTrackerApp
 import com.nihal.paywise.ui.addtxn.AddTransactionViewModel
 import com.nihal.paywise.ui.budgets.BudgetsViewModel
 import com.nihal.paywise.ui.home.HomeViewModel
+import com.nihal.paywise.ui.lock.LockViewModel
 import com.nihal.paywise.ui.onboarding.OnboardingViewModel
 import com.nihal.paywise.ui.recurring.AddRecurringViewModel
 import com.nihal.paywise.ui.recurring.RecurringHistoryViewModel
@@ -16,13 +17,34 @@ import com.nihal.paywise.ui.recurring.RecurringListViewModel
 import com.nihal.paywise.ui.recurring.RecurringTransactionsViewModel
 import com.nihal.paywise.ui.reports.ReportsViewModel
 import com.nihal.paywise.ui.settings.SettingsViewModel
+import com.nihal.paywise.ui.settings.setpin.SetPinViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
         initializer {
             SettingsViewModel(
                 inventoryApplication().container.backupRepository,
-                inventoryApplication().container.userPreferencesRepository
+                inventoryApplication().container.userPreferencesRepository,
+                inventoryApplication().container.getAppLockSettingsUseCase,
+                inventoryApplication().container.setLockEnabledUseCase,
+                inventoryApplication().container.setPinUseCase,
+                inventoryApplication().container.setBiometricEnabledUseCase,
+                inventoryApplication().container.setAutoLockMinutesUseCase
+            )
+        }
+        initializer {
+            LockViewModel(
+                inventoryApplication().container.appLockRepository,
+                inventoryApplication().container.verifyPinUseCase,
+                inventoryApplication().container.markUnlockedNowUseCase,
+                inventoryApplication().container.registerFailedAttemptUseCase,
+                inventoryApplication().container.resetFailedAttemptsUseCase,
+                inventoryApplication().container.setCooldownUntilUseCase
+            )
+        }
+        initializer {
+            SetPinViewModel(
+                inventoryApplication().container.setPinUseCase
             )
         }
         initializer {

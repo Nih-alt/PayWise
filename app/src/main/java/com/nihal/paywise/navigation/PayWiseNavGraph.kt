@@ -24,34 +24,43 @@ import com.nihal.paywise.ui.splash.StartRouteScreen
 import com.nihal.paywise.ui.budgets.BudgetsScreen
 import com.nihal.paywise.ui.reports.ReportsScreen
 import com.nihal.paywise.ui.settings.SettingsScreen
+import com.nihal.paywise.ui.settings.setpin.SetPinScreen
+import com.nihal.paywise.ui.lock.LockScreen
 
 @Composable
 fun PayWiseNavHost(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
     onboardingCompleted: Boolean,
+    isLocked: Boolean,
+    onUnlock: () -> Unit,
     navRequest: NotificationNavRequest? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val appContainer = (context.applicationContext as ExpenseTrackerApp).container
 
+    val startDestination = if (isLocked) "lock" else "start"
+
     NavHost(
         navController = navController,
-        startDestination = "start",
+        startDestination = startDestination,
         modifier = modifier
     ) {
+        composable("lock") {
+            LockScreen(onUnlock = onUnlock)
+        }
         composable("start") {
             StartRouteScreen(
                 userPreferencesRepository = appContainer.userPreferencesRepository,
                 onNavigateToOnboarding = {
                     navController.navigate("onboarding") {
-                        popUpTo("start") { inclusive = true }
+                        popUpTo("lock") { inclusive = true }
                     }
                 },
                 onNavigateToHome = {
                     navController.navigate("home") {
-                        popUpTo("start") { inclusive = true }
+                        popUpTo("lock") { inclusive = true }
                     }
                 }
             )
@@ -89,7 +98,13 @@ fun PayWiseNavHost(
                     navController.navigate("home") {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                onSetPinClick = { navController.navigate("set_pin") }
+            )
+        }
+        composable("set_pin") {
+            SetPinScreen(
+                onPinSet = { navController.popBackStack() }
             )
         }
         composable("add_txn") {

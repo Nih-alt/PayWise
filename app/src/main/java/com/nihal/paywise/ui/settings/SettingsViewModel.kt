@@ -10,6 +10,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nihal.paywise.data.local.UserPreferencesRepository
 import com.nihal.paywise.data.repository.BackupRepository
+import com.nihal.paywise.domain.usecase.applock.GetAppLockSettingsUseCase
+import com.nihal.paywise.domain.usecase.applock.SetAutoLockMinutesUseCase
+import com.nihal.paywise.domain.usecase.applock.SetBiometricEnabledUseCase
+import com.nihal.paywise.domain.usecase.applock.SetLockEnabledUseCase
+import com.nihal.paywise.domain.usecase.applock.SetPinUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -19,11 +24,43 @@ import java.util.*
 
 class SettingsViewModel(
     private val backupRepository: BackupRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    private val getAppLockSettingsUseCase: GetAppLockSettingsUseCase,
+    private val setLockEnabledUseCase: SetLockEnabledUseCase,
+    private val setPinUseCase: SetPinUseCase,
+    private val setBiometricEnabledUseCase: SetBiometricEnabledUseCase,
+    private val setAutoLockMinutesUseCase: SetAutoLockMinutesUseCase
 ) : ViewModel() {
 
     val backupMetadata = userPreferencesRepository.backupMetadata
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    
+    val appLockSettings = getAppLockSettingsUseCase()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setLockEnabledUseCase(enabled)
+        }
+    }
+
+    fun setPin(pin: String) {
+        viewModelScope.launch {
+            setPinUseCase(pin)
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            setBiometricEnabledUseCase(enabled)
+        }
+    }
+
+    fun setAutoLockMinutes(minutes: Int) {
+        viewModelScope.launch {
+            setAutoLockMinutesUseCase(minutes)
+        }
+    }
 
     fun exportCsv(context: Context, onSuccess: (String) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
