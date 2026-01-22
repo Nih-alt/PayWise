@@ -1,11 +1,14 @@
 package com.nihal.paywise.ui.addtxn
 
+import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.nihal.paywise.data.local.DatabaseSeeder
 import com.nihal.paywise.data.repository.AccountRepository
 import com.nihal.paywise.data.repository.CategoryRepository
@@ -15,6 +18,7 @@ import com.nihal.paywise.domain.model.Category
 import com.nihal.paywise.domain.model.CategoryKind
 import com.nihal.paywise.domain.model.Transaction
 import com.nihal.paywise.domain.model.TransactionType
+import com.nihal.paywise.util.BudgetCheckWorker
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.onEach
@@ -24,6 +28,7 @@ import java.time.Instant
 import java.util.UUID
 
 class AddTransactionViewModel(
+    private val application: Application,
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository
@@ -106,6 +111,12 @@ class AddTransactionViewModel(
                 splitOfTransactionId = null
             )
             transactionRepository.insertTransaction(transaction)
+            
+            // Trigger immediate budget check
+            WorkManager.getInstance(application).enqueue(
+                OneTimeWorkRequestBuilder<BudgetCheckWorker>().build()
+            )
+            
             onSuccess()
         }
     }

@@ -2,34 +2,94 @@ package com.nihal.paywise.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.nihal.paywise.di.AppViewModelProvider
+import com.nihal.paywise.navigation.NotificationNavRequest
 import com.nihal.paywise.ui.addtxn.AddTransactionScreen
 import com.nihal.paywise.ui.home.HomeScreen
+import com.nihal.paywise.ui.onboarding.OnboardingScreen
+import com.nihal.paywise.ui.onboarding.OnboardingViewModel
 import com.nihal.paywise.ui.recurring.AddRecurringScreen
 import com.nihal.paywise.ui.recurring.RecurringHistoryScreen
 import com.nihal.paywise.ui.recurring.RecurringListScreen
-
+import com.nihal.paywise.ExpenseTrackerApp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.SnackbarHostState
+import com.nihal.paywise.ui.splash.StartRouteScreen
+import com.nihal.paywise.ui.budgets.BudgetsScreen
+import com.nihal.paywise.ui.reports.ReportsScreen
+import com.nihal.paywise.ui.settings.SettingsScreen
 
 @Composable
 fun PayWiseNavHost(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
+    onboardingCompleted: Boolean,
+    navRequest: NotificationNavRequest? = null,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val appContainer = (context.applicationContext as ExpenseTrackerApp).container
+
     NavHost(
         navController = navController,
-        startDestination = "home",
+        startDestination = "start",
         modifier = modifier
     ) {
+        composable("start") {
+            StartRouteScreen(
+                userPreferencesRepository = appContainer.userPreferencesRepository,
+                onNavigateToOnboarding = {
+                    navController.navigate("onboarding") {
+                        popUpTo("start") { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate("home") {
+                        popUpTo("start") { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable("onboarding") {
+            val onboardingViewModel: OnboardingViewModel = viewModel(factory = AppViewModelProvider.Factory)
+            OnboardingScreen(
+                onFinish = {
+                    onboardingViewModel.completeOnboarding()
+                    navController.navigate("home") {
+                        popUpTo("onboarding") {
+                            inclusive = true
+                        }
+                    }
+                }
+            )
+        }
         composable("home") {
             HomeScreen(
                 onAddClick = { navController.navigate("add_txn") },
-                onRecurringClick = { navController.navigate("recurring_list") }
+                onRecurringClick = { navController.navigate("recurring_list") },
+                onBudgetClick = { navController.navigate("budgets") }
+            )
+        }
+        composable("budgets") {
+            BudgetsScreen()
+        }
+        composable("reports") {
+            ReportsScreen()
+        }
+        composable("settings") {
+            SettingsScreen(
+                snackbarHostState = snackbarHostState,
+                onImportSuccess = {
+                    navController.navigate("home") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
         composable("add_txn") {

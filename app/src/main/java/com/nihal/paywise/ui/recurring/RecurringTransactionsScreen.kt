@@ -174,8 +174,9 @@ fun RecurringHistoryScreen(
                 } else if (rows.isEmpty()) {
                     EmptyState(
                         icon = Icons.Default.History,
-                        contentDescription = "No History",
-                        message = "No payments recorded yet for this recurring transaction."
+                        title = "No history yet",
+                        subtitle = "Payments recorded for this rule will appear in a timeline here.",
+                        hint = "Mark a payment as 'Paid' to see it here"
                     )
                 } else {
                     // Group rows by Month Year

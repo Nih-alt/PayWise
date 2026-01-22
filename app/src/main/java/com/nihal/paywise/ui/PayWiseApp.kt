@@ -17,6 +17,7 @@ import com.nihal.paywise.ui.components.PayWiseScaffold
 
 @Composable
 fun PayWiseApp(
+    onboardingCompleted: Boolean,
     navRequest: NotificationNavRequest? = null,
     onNavRequestHandled: () -> Unit = {}
 ) {
@@ -50,6 +51,8 @@ fun PayWiseApp(
                 PayWiseNavHost(
                     navController = navController,
                     snackbarHostState = snackbarHostState,
+                    navRequest = navRequest,
+                    onboardingCompleted = onboardingCompleted,
                     modifier = Modifier.padding(innerPadding)
                 )
             }

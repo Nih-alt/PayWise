@@ -17,13 +17,14 @@ import androidx.compose.ui.unit.dp
 fun SoftCard(
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.large,
+    containerColor: Color = MaterialTheme.colorScheme.surface,
     elevation: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Surface(
         modifier = modifier,
         shape = shape,
-        color = MaterialTheme.colorScheme.surface,
+        color = containerColor,
         tonalElevation = elevation,
         shadowElevation = elevation,
         border = BorderStroke(

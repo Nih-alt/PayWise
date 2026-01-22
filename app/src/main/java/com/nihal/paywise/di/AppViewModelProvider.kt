@@ -7,25 +7,50 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nihal.paywise.ExpenseTrackerApp
 import com.nihal.paywise.ui.addtxn.AddTransactionViewModel
+import com.nihal.paywise.ui.budgets.BudgetsViewModel
 import com.nihal.paywise.ui.home.HomeViewModel
+import com.nihal.paywise.ui.onboarding.OnboardingViewModel
 import com.nihal.paywise.ui.recurring.AddRecurringViewModel
 import com.nihal.paywise.ui.recurring.RecurringHistoryViewModel
 import com.nihal.paywise.ui.recurring.RecurringListViewModel
 import com.nihal.paywise.ui.recurring.RecurringTransactionsViewModel
+import com.nihal.paywise.ui.reports.ReportsViewModel
+import com.nihal.paywise.ui.settings.SettingsViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
+        initializer {
+            SettingsViewModel(
+                inventoryApplication().container.backupRepository,
+                inventoryApplication().container.userPreferencesRepository
+            )
+        }
+        initializer {
+            OnboardingViewModel(
+                inventoryApplication().container.userPreferencesRepository
+            )
+        }
+        initializer {
+            BudgetsViewModel(
+                inventoryApplication().container.budgetRepository,
+                inventoryApplication().container.categoryRepository,
+                inventoryApplication().container.getBudgetStatusUseCase,
+                inventoryApplication().container.upsertBudgetUseCase
+            )
+        }
         initializer {
             HomeViewModel(
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository,
                 inventoryApplication().container.recurringRepository,
-                inventoryApplication().container.runRecurringAutoPostUseCase
+                inventoryApplication().container.runRecurringAutoPostUseCase,
+                inventoryApplication().container.getBudgetStatusUseCase
             )
         }
         initializer {
             AddTransactionViewModel(
+                inventoryApplication(),
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository
@@ -58,6 +83,13 @@ object AppViewModelProvider {
                 inventoryApplication().container.recurringRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository
+            )
+        }
+        initializer {
+            ReportsViewModel(
+                inventoryApplication().container.getCategoryBreakdownUseCase,
+                inventoryApplication().container.getMonthlyTrendUseCase,
+                inventoryApplication().container.getFixedVsDiscretionaryUseCase
             )
         }
         initializer {

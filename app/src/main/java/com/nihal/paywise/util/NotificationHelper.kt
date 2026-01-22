@@ -21,15 +21,65 @@ object NotificationHelper {
     const val CHANNEL_NAME = "Recurring Reminders"
     private const val CHANNEL_DESCRIPTION = "Notifications for recurring transaction payments"
 
-    fun createNotificationChannel(context: Context) {
+    const val BUDGET_CHANNEL_ID = "budget_alerts"
+    const val BUDGET_CHANNEL_NAME = "Budget Alerts"
+    private const val BUDGET_CHANNEL_DESCRIPTION = "Alerts for monthly budget thresholds"
+
+    fun createNotificationChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_DEFAULT // or HIGH if urgency needed
-            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                description = CHANNEL_DESCRIPTION
-            }
             val notificationManager: NotificationManager =
                 context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+
+            // Recurring Channel
+            val recurringChannel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = CHANNEL_DESCRIPTION
+            }
+            notificationManager.createNotificationChannel(recurringChannel)
+
+            // Budget Channel
+            val budgetChannel = NotificationChannel(BUDGET_CHANNEL_ID, BUDGET_CHANNEL_NAME, NotificationManager.IMPORTANCE_HIGH).apply {
+                description = BUDGET_CHANNEL_DESCRIPTION
+            }
+            notificationManager.createNotificationChannel(budgetChannel)
+        }
+    }
+
+    fun showBudgetNotification(
+        context: Context,
+        threshold: Int,
+        monthName: String
+    ) {
+        val title = "Budget alert"
+        val content = if (threshold == 80) {
+            "You've used 80% of your $monthName budget."
+        } else {
+            "You've crossed your $monthName budget."
+        }
+
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra("nav_target", "budgets")
+        }
+        val openPendingIntent: PendingIntent = PendingIntent.getActivity(
+            context,
+            ("BUDGET_$threshold".hashCode()),
+            openIntent,
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = NotificationCompat.Builder(context, BUDGET_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher_round)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(openPendingIntent)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            if (Build.VERSION.SDK_INT >= 33) {
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
+            }
+            notify("BUDGET_ALERT".hashCode() + threshold, builder.build())
         }
     }
 

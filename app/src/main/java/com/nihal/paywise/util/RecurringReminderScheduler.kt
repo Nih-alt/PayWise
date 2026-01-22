@@ -16,13 +16,69 @@ import com.nihal.paywise.data.repository.RecurringSnoozeRepository
 import java.time.LocalDateTime
 import java.time.LocalTime
 
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
+
 class RecurringReminderScheduler(
     private val context: Context,
     private val snoozeRepository: RecurringSnoozeRepository
 ) {
 
+    companion object {
+        const val DAILY_WORK_NAME = "paywise_daily_check"
+        const val BUDGET_WORK_NAME = "paywise_budget_check"
+        const val AUTO_BACKUP_WORK_NAME = "paywise_auto_backup"
+    }
+
     private val TAG = "ReminderScheduler"
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    fun scheduleDailyCheck() {
+        val workManager = WorkManager.getInstance(context)
+        
+        // 1. Recurring & Auto-post Daily Check
+        val dailyRequest = PeriodicWorkRequestBuilder<RescheduleRemindersWorker>(24, TimeUnit.HOURS)
+            .setInitialDelay(calculateInitialDelay(9, 0), TimeUnit.MILLISECONDS)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            DAILY_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            dailyRequest
+        )
+
+        // 2. Budget Alert Daily Check
+        val budgetRequest = PeriodicWorkRequestBuilder<BudgetCheckWorker>(24, TimeUnit.HOURS)
+            .setInitialDelay(calculateInitialDelay(9, 15), TimeUnit.MILLISECONDS) // Slightly staggered
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            BUDGET_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            budgetRequest
+        )
+
+        // 3. Weekly Auto-Backup
+        val backupRequest = PeriodicWorkRequestBuilder<BackupWorker>(7, TimeUnit.DAYS)
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            AUTO_BACKUP_WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            backupRequest
+        )
+    }
+
+    private fun calculateInitialDelay(hour: Int, minute: Int): Long {
+        val now = LocalDateTime.now()
+        var target = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0)
+        if (now.isAfter(target)) {
+            target = target.plusDays(1)
+        }
+        return java.time.Duration.between(now, target).toMillis()
+    }
 
     enum class ReminderType {
         LEAD, DUE, OVERDUE, SNOOZED

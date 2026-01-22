@@ -8,6 +8,7 @@ import com.nihal.paywise.data.repository.RecurringRepository
 import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.model.Transaction
 import com.nihal.paywise.domain.model.TransactionType
+import com.nihal.paywise.domain.usecase.GetBudgetStatusUseCase
 import com.nihal.paywise.domain.usecase.RunRecurringAutoPostUseCase
 import com.nihal.paywise.util.DateTimeFormatterUtil
 import com.nihal.paywise.util.MoneyFormatter
@@ -15,12 +16,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
+
+enum class HomeBudgetStatus {
+    NOT_SET, ON_TRACK, NEAR_LIMIT, OVER_BUDGET
+}
 
 data class HomeTransactionUiModel(
     val id: String,
@@ -34,6 +41,8 @@ data class HomeTransactionUiModel(
 
 data class HomeSummaryUiModel(
     val totalExpense: String,
+    val budgetPercent: Int? = null,
+    val budgetStatus: HomeBudgetStatus = HomeBudgetStatus.NOT_SET,
     val count: Int
 )
 
@@ -48,10 +57,12 @@ class HomeViewModel(
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
     private val recurringRepository: RecurringRepository,
-    private val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase
+    private val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase,
+    private val getBudgetStatusUseCase: GetBudgetStatusUseCase
 ) : ViewModel() {
 
     private val currentMonthRange = calculateCurrentMonthRange()
+    private val currentYearMonth = YearMonth.now()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -59,17 +70,28 @@ class HomeViewModel(
         }
     }
 
-    val summary: StateFlow<HomeSummaryUiModel> = transactionRepository.getTransactionsBetweenStream(currentMonthRange.first, currentMonthRange.second)
-        .map { txs: List<Transaction> ->
-            val total = txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amountPaise }
+    val summary: StateFlow<HomeSummaryUiModel> = getBudgetStatusUseCase(currentYearMonth)
+        .combine(transactionRepository.getTransactionsBetweenStream(currentMonthRange.first, currentMonthRange.second)) { budgetStatus, txs ->
+            val totalSpent = txs.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amountPaise }
+            
+            val overall = budgetStatus.overall
+            val (status, percent) = when {
+                overall == null -> HomeBudgetStatus.NOT_SET to null
+                overall.percentUsed >= 1.0f -> HomeBudgetStatus.OVER_BUDGET to (overall.percentUsed * 100).toInt()
+                overall.percentUsed >= 0.8f -> HomeBudgetStatus.NEAR_LIMIT to (overall.percentUsed * 100).toInt()
+                else -> HomeBudgetStatus.ON_TRACK to (overall.percentUsed * 100).toInt()
+            }
+
             HomeSummaryUiModel(
-                totalExpense = MoneyFormatter.formatPaise(total),
+                totalExpense = MoneyFormatter.formatPaise(totalSpent),
+                budgetPercent = percent,
+                budgetStatus = status,
                 count = txs.size
             )
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = HomeSummaryUiModel("0.00", 0)
+            initialValue = HomeSummaryUiModel("0.00", count = 0)
         )
 
     val categorySummary: StateFlow<List<CategorySummaryUiModel>> = combine(

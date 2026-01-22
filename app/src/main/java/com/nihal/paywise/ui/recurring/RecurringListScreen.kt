@@ -73,6 +73,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.ui.components.AppBackground
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NotificationsActive
 import com.nihal.paywise.ui.components.EmptyState
 import com.nihal.paywise.ui.components.ShimmerLoadingListItem
 import com.nihal.paywise.ui.components.SoftCard
@@ -209,90 +210,108 @@ fun RecurringListScreen(
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = Color.Transparent
-    ) { paddingValues ->
-        AppBackground {
-            Column(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
+        if (isNotificationPermissionMissing || areSystemNotificationsDisabled) {
+            SoftCard(
+                modifier = Modifier
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp)
+                    .fillMaxWidth(),
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f),
+                elevation = 0.dp
             ) {
-                if (isNotificationPermissionMissing || areSystemNotificationsDisabled) {
-                    Box(modifier = Modifier.padding(16.dp)) {
-                        Button(
-                            onClick = {
-                                if (isNotificationPermissionMissing) {
-                                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                } else {
-                                    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                                        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                    }
-                                    try {
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                                            data = Uri.fromParts("package", context.packageName, null)
-                                        }
-                                        context.startActivity(settingsIntent)
-                                    }
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)
-                        ) {
-                            Text("Enable Notifications for Reminders")
-                        }
-                    }
-                }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 0.dp)
                 ) {
-                    item {
-                        RecurringHeaderCard(
-                            recurringItems = recurringItems,
-                            displayMonth = displayMonth
-                        )
-                                        }
-                    
-                                        if (isLoading) {
-                                            items(3) {
-                                                ShimmerLoadingListItem()
-                                            }
-                                        } else if (recurringItems.isEmpty()) {
-                                            item {
-                                                EmptyState(
-                                                    icon = Icons.Default.Info,
-                                                    contentDescription = "No recurring transactions",
-                                                    message = "No recurring transactions found for $displayMonth. Add one to get started!",
-                                                    modifier = Modifier.padding(top = 64.dp)
-                                                )
-                                            }
-                                        } else {
-                                            items(recurringItems, key = { it.id }) { item ->
-                                                RecurringItemCard(
-                                                    item = item,
-                                                    onPaidClick = { viewModel.showConfirmDialog(item) },
-                                                    onSkipClick = {
-                                                        if (item.isSkipped) viewModel.unskipThisMonth(item.id)
-                                                        else viewModel.showSkipConfirmDialog(item)
-                                                    },
-                                                    onToggleStatus = { viewModel.toggleStatus(item.id) },
-                                                    onHistoryClick = { onHistoryClick(item.id) },
-                                                    isSaving = viewModel.isSaving,
-                                                    modifier = Modifier.animateItemPlacement()
-                                                )
-                                            }
-                                        }
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Enable reminders",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                        onClick = {
+                            if (isNotificationPermissionMissing) {
+                                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    val settingsIntent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
                                     }
+                                    context.startActivity(settingsIntent)
                                 }
                             }
                         }
+                    ) {
+                        Text(
+                            "Enable",
+                            color = MaterialTheme.colorScheme.tertiary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
+                }
+            }
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item {
+                RecurringHeaderCard(
+                    recurringItems = recurringItems,
+                    displayMonth = displayMonth
+                )
+            }
+
+            if (isLoading) {
+                items(3) {
+                    ShimmerLoadingListItem()
+                }
+                                                    } else if (recurringItems.isEmpty()) {
+                                                        item {
+                                                            EmptyState(
+                                                                icon = Icons.Default.Info,
+                                                                title = "No rules found",
+                                                                subtitle = "You haven't set up any recurring bills or EMIs for $displayMonth.",
+                                                                hint = "Tap + to create a new rule",
+                                                                modifier = Modifier.padding(top = 24.dp)
+                                                            )
+                                                        }
+                                                    } else {                items(recurringItems, key = { it.id }) { item ->
+                    RecurringItemCard(
+                        item = item,
+                        onPaidClick = { viewModel.showConfirmDialog(item) },
+                        onSkipClick = {
+                            if (item.isSkipped) viewModel.unskipThisMonth(item.id)
+                            else viewModel.showSkipConfirmDialog(item)
+                        },
+                        onToggleStatus = { viewModel.toggleStatus(item.id) },
+                        onHistoryClick = { onHistoryClick(item.id) },
+                        isSaving = viewModel.isSaving,
+                        modifier = Modifier.animateItemPlacement()
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun RecurringHeaderCard(

@@ -7,18 +7,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.nihal.paywise.data.local.dao.AccountDao
-import com.nihal.paywise.data.local.dao.CategoryDao
-import com.nihal.paywise.data.local.dao.RecurringDao
-import com.nihal.paywise.data.local.dao.TransactionDao
-import com.nihal.paywise.data.local.entity.AccountEntity
-import com.nihal.paywise.data.local.entity.CategoryEntity
-import com.nihal.paywise.data.local.dao.RecurringSnoozeDao
-import com.nihal.paywise.data.local.entity.RecurringSnoozeEntity
-import com.nihal.paywise.data.local.dao.RecurringSkipDao
-import com.nihal.paywise.data.local.entity.RecurringSkipEntity
-import com.nihal.paywise.data.local.entity.RecurringEntity
-import com.nihal.paywise.data.local.entity.TransactionEntity
+import com.nihal.paywise.data.local.dao.*
+import com.nihal.paywise.data.local.entity.*
 
 @Database(
     entities = [
@@ -27,9 +17,10 @@ import com.nihal.paywise.data.local.entity.TransactionEntity
         TransactionEntity::class,
         RecurringEntity::class,
         RecurringSkipEntity::class,
-        RecurringSnoozeEntity::class
+        RecurringSnoozeEntity::class,
+        BudgetEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(PayWiseConverters::class)
@@ -40,6 +31,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recurringDao(): RecurringDao
     abstract fun recurringSkipDao(): RecurringSkipDao
     abstract fun recurringSnoozeDao(): RecurringSnoozeDao
+    abstract fun budgetDao(): BudgetDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         @Volatile
@@ -101,10 +94,29 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `budgets` (
+                        `id` TEXT NOT NULL,
+                        `yearMonth` TEXT NOT NULL,
+                        `categoryId` TEXT,
+                        `amountPaise` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_budgets_yearMonth` ON `budgets` (`yearMonth`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_budgets_yearMonth_categoryId` ON `budgets` (`yearMonth`, `categoryId`)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "expense_tracker.db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { Instance = it }
             }

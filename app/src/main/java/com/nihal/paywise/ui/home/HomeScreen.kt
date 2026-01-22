@@ -1,6 +1,7 @@
 package com.nihal.paywise.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
@@ -36,6 +37,7 @@ import com.nihal.paywise.ui.util.CategoryVisuals
 fun HomeScreen(
     onAddClick: () -> Unit,
     onRecurringClick: () -> Unit,
+    onBudgetClick: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -51,10 +53,12 @@ fun HomeScreen(
     ) {
         // 1. Hero Card
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             HeroCard(
                 month = DateTimeFormatterUtil.formatYearMonth(YearMonth.now()),
-                totalSpent = summary.totalExpense
+                totalSpent = summary.totalExpense,
+                summary = summary,
+                onBudgetClick = onBudgetClick
             )
         }
 
@@ -79,18 +83,25 @@ fun HomeScreen(
         item {
             SectionHeader(
                 title = "Recent Activity",
-                actionText = "See all",
+                actionText = if (transactions.isEmpty()) null else "See all",
                 onActionClick = { /* Navigate to all transactions */ }
             )
         }
 
         if (transactions.isEmpty()) {
             item {
-                EmptyState(
-                    icon = Icons.Default.Info,
-                    title = "No transactions",
-                    subtitle = "Tap 'Add Expense' to get started."
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    EmptyState(
+                        icon = Icons.Default.Info,
+                        title = "No transactions",
+                        subtitle = "Your activity for this month will appear here.",
+                        hint = "Tap + to add your first expense"
+                    )
+                }
             }
         } else {
             item {
@@ -111,7 +122,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun HeroCard(month: String, totalSpent: String) {
+fun HeroCard(
+    month: String,
+    totalSpent: String,
+    summary: HomeSummaryUiModel,
+    onBudgetClick: () -> Unit
+) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
@@ -134,15 +150,31 @@ fun HeroCard(month: String, totalSpent: String) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                
+                val statusText = when(summary.budgetStatus) {
+                    HomeBudgetStatus.NOT_SET -> "Set Budget"
+                    HomeBudgetStatus.ON_TRACK -> "On Track"
+                    HomeBudgetStatus.NEAR_LIMIT -> "Near Limit"
+                    HomeBudgetStatus.OVER_BUDGET -> "Over Budget"
+                }
+                
+                val statusColor = when(summary.budgetStatus) {
+                    HomeBudgetStatus.NOT_SET -> MaterialTheme.colorScheme.secondary
+                    HomeBudgetStatus.ON_TRACK -> MaterialTheme.colorScheme.primary
+                    HomeBudgetStatus.NEAR_LIMIT -> MaterialTheme.colorScheme.tertiary
+                    HomeBudgetStatus.OVER_BUDGET -> MaterialTheme.colorScheme.error
+                }
+
                 Surface(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    shape = CircleShape
+                    color = statusColor.copy(alpha = 0.1f),
+                    shape = CircleShape,
+                    onClick = onBudgetClick
                 ) {
                     Text(
-                        text = "On Track",
+                        text = statusText,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = statusColor,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -180,13 +212,20 @@ fun HeroCard(month: String, totalSpent: String) {
                     )
                     Text("--", style = MaterialTheme.typography.titleSmall)
                 }
-                Column(horizontalAlignment = Alignment.End) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { onBudgetClick() }
+                ) {
                     Text(
                         "Budget",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
-                    Text("80%", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        text = if (summary.budgetPercent != null) "${summary.budgetPercent}%" else "Set",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (summary.budgetStatus == HomeBudgetStatus.OVER_BUDGET) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
+                    )
                 }
             }
         }

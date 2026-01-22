@@ -2,26 +2,10 @@ package com.nihal.paywise.di
 
 import android.content.Context
 import com.nihal.paywise.data.local.AppDatabase
-import com.nihal.paywise.data.repository.AccountRepository
-import com.nihal.paywise.data.repository.CategoryRepository
-import com.nihal.paywise.data.repository.OfflineAccountRepository
-import com.nihal.paywise.data.repository.OfflineCategoryRepository
-import com.nihal.paywise.data.repository.OfflineRecurringRepository
-import com.nihal.paywise.data.repository.OfflineTransactionRepository
-import com.nihal.paywise.data.repository.RecurringRepository
-import com.nihal.paywise.data.repository.TransactionRepository
-import com.nihal.paywise.domain.usecase.MarkRecurringAsPaidUseCase
-import com.nihal.paywise.domain.usecase.RunRecurringAutoPostUseCase
-import com.nihal.paywise.domain.usecase.SkipRecurringForMonthUseCase
-import com.nihal.paywise.domain.usecase.UndoMarkRecurringAsPaidUseCase
-import com.nihal.paywise.domain.usecase.DeleteRecurringTransactionUseCase
-import com.nihal.paywise.domain.usecase.SyncRecurringLastPostedMonthUseCase
+import com.nihal.paywise.data.local.UserPreferencesRepository
+import com.nihal.paywise.data.repository.*
+import com.nihal.paywise.domain.usecase.*
 import com.nihal.paywise.util.RecurringReminderScheduler
-
-import com.nihal.paywise.data.repository.OfflineRecurringSkipRepository
-import com.nihal.paywise.data.repository.RecurringSkipRepository
-import com.nihal.paywise.data.repository.OfflineRecurringSnoozeRepository
-import com.nihal.paywise.data.repository.RecurringSnoozeRepository
 
 interface AppContainer {
     val accountRepository: AccountRepository
@@ -30,17 +14,31 @@ interface AppContainer {
     val recurringRepository: RecurringRepository
     val recurringSkipRepository: RecurringSkipRepository
     val recurringSnoozeRepository: RecurringSnoozeRepository
+    val budgetRepository: BudgetRepository
+    val backupRepository: BackupRepository
+    val userPreferencesRepository: UserPreferencesRepository
     val recurringReminderScheduler: RecurringReminderScheduler
+    
     val markRecurringAsPaidUseCase: MarkRecurringAsPaidUseCase
     val undoMarkRecurringAsPaidUseCase: UndoMarkRecurringAsPaidUseCase
     val skipRecurringForMonthUseCase: SkipRecurringForMonthUseCase
     val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase
     val deleteRecurringTransactionUseCase: DeleteRecurringTransactionUseCase
     val syncRecurringLastPostedMonthUseCase: SyncRecurringLastPostedMonthUseCase
+    val getMonthlyExpenseTotalsUseCase: GetMonthlyExpenseTotalsUseCase
+    val getBudgetStatusUseCase: GetBudgetStatusUseCase
+    val upsertBudgetUseCase: UpsertBudgetUseCase
+    val getCategoryBreakdownUseCase: GetCategoryBreakdownUseCase
+    val getMonthlyTrendUseCase: GetMonthlyTrendUseCase
+    val getFixedVsDiscretionaryUseCase: GetFixedVsDiscretionaryUseCase
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
     private val database: AppDatabase by lazy { AppDatabase.getDatabase(context) }
+
+    override val userPreferencesRepository: UserPreferencesRepository by lazy {
+        UserPreferencesRepository(context)
+    }
 
     override val accountRepository: AccountRepository by lazy {
         OfflineAccountRepository(database.accountDao())
@@ -64,6 +62,14 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val recurringSnoozeRepository: RecurringSnoozeRepository by lazy {
         OfflineRecurringSnoozeRepository(database.recurringSnoozeDao())
+    }
+
+    override val budgetRepository: BudgetRepository by lazy {
+        OfflineBudgetRepository(database.budgetDao())
+    }
+
+    override val backupRepository: BackupRepository by lazy {
+        OfflineBackupRepository(database.backupDao())
     }
 
     override val recurringReminderScheduler: RecurringReminderScheduler by lazy {
@@ -92,5 +98,29 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val deleteRecurringTransactionUseCase: DeleteRecurringTransactionUseCase by lazy {
         DeleteRecurringTransactionUseCase(transactionRepository, syncRecurringLastPostedMonthUseCase)
+    }
+
+    override val getMonthlyExpenseTotalsUseCase: GetMonthlyExpenseTotalsUseCase by lazy {
+        GetMonthlyExpenseTotalsUseCase(transactionRepository)
+    }
+
+    override val getBudgetStatusUseCase: GetBudgetStatusUseCase by lazy {
+        GetBudgetStatusUseCase(budgetRepository, getMonthlyExpenseTotalsUseCase)
+    }
+
+    override val upsertBudgetUseCase: UpsertBudgetUseCase by lazy {
+        UpsertBudgetUseCase(budgetRepository)
+    }
+
+    override val getCategoryBreakdownUseCase: GetCategoryBreakdownUseCase by lazy {
+        GetCategoryBreakdownUseCase(transactionRepository, categoryRepository)
+    }
+
+    override val getMonthlyTrendUseCase: GetMonthlyTrendUseCase by lazy {
+        GetMonthlyTrendUseCase(transactionRepository)
+    }
+
+    override val getFixedVsDiscretionaryUseCase: GetFixedVsDiscretionaryUseCase by lazy {
+        GetFixedVsDiscretionaryUseCase(transactionRepository, categoryRepository)
     }
 }
