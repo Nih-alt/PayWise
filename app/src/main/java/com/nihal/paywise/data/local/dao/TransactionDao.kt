@@ -6,6 +6,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.nihal.paywise.data.local.entity.TransactionEntity
+import com.nihal.paywise.domain.model.CategoryBreakdownRow
+import com.nihal.paywise.domain.model.SpendingGroupRow
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
 
@@ -19,6 +21,37 @@ interface TransactionDao {
 
     @Query("SELECT * FROM transactions WHERE timestamp >= :startInstant AND timestamp < :endInstant ORDER BY timestamp DESC")
     fun observeBetween(startInstant: Instant, endInstant: Instant): Flow<List<TransactionEntity>>
+
+    @Query("""
+        SELECT 
+            c.id as categoryId, 
+            c.name as categoryName, 
+            c.color as categoryColor, 
+            SUM(t.amountPaise) as totalAmount,
+            0.0 as percentage
+        FROM transactions t
+        JOIN categories c ON t.categoryId = c.id
+        WHERE t.type = 'EXPENSE' 
+          AND t.timestamp >= :startInstant 
+          AND t.timestamp < :endInstant
+        GROUP BY c.id
+        ORDER BY totalAmount DESC
+    """)
+    fun getCategoryBreakdown(startInstant: Instant, endInstant: Instant): Flow<List<CategoryBreakdownRow>>
+
+    @Query("""
+        SELECT 
+            c.spendingGroup as spendingGroup, 
+            SUM(t.amountPaise) as totalAmount,
+            0.0 as percentage
+        FROM transactions t
+        JOIN categories c ON t.categoryId = c.id
+        WHERE t.type = 'EXPENSE' 
+          AND t.timestamp >= :startInstant 
+          AND t.timestamp < :endInstant
+        GROUP BY c.spendingGroup
+    """)
+    fun getSpendingGroupStats(startInstant: Instant, endInstant: Instant): Flow<List<SpendingGroupRow>>
 
     @Query("SELECT * FROM transactions WHERE accountId = :accountId OR counterAccountId = :accountId ORDER BY timestamp DESC")
     fun observeByAccount(accountId: String): Flow<List<TransactionEntity>>

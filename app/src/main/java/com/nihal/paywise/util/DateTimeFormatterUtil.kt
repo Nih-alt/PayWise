@@ -10,9 +10,9 @@ import java.util.Locale
  * Utility to format java.time.Instant to local date and time strings.
  */
 object DateTimeFormatterUtil {
-    private val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
-    private val timeFormatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH)
-    private val yearMonthFormatter = DateTimeFormatter.ofPattern("MMM yyyy", Locale.ENGLISH)
+    private val dateFormatter get() = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.getDefault())
+    private val timeFormatter get() = DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault())
+    private val yearMonthFormatter get() = DateTimeFormatter.ofPattern("MMM yyyy", Locale.getDefault())
 
     /**
      * Returns a date string like "20 Jan 2026".

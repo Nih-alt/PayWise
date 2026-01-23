@@ -6,7 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nihal.paywise.ExpenseTrackerApp
-import com.nihal.paywise.ui.addtxn.AddTransactionViewModel
+import com.nihal.paywise.ui.addtxn.TransactionEditorViewModel
 import com.nihal.paywise.ui.budgets.BudgetsViewModel
 import com.nihal.paywise.ui.home.HomeViewModel
 import com.nihal.paywise.ui.lock.LockViewModel
@@ -18,6 +18,7 @@ import com.nihal.paywise.ui.recurring.RecurringTransactionsViewModel
 import com.nihal.paywise.ui.reports.ReportsViewModel
 import com.nihal.paywise.ui.settings.SettingsViewModel
 import com.nihal.paywise.ui.settings.setpin.SetPinViewModel
+import com.nihal.paywise.ui.transactions.TransactionsListViewModel
 
 object AppViewModelProvider {
     val Factory = viewModelFactory {
@@ -66,13 +67,22 @@ object AppViewModelProvider {
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository,
                 inventoryApplication().container.recurringRepository,
+                inventoryApplication().container.userPreferencesRepository,
                 inventoryApplication().container.runRecurringAutoPostUseCase,
                 inventoryApplication().container.getBudgetStatusUseCase
             )
         }
         initializer {
-            AddTransactionViewModel(
+            TransactionsListViewModel(
+                inventoryApplication().container.transactionRepository,
+                inventoryApplication().container.accountRepository,
+                inventoryApplication().container.categoryRepository
+            )
+        }
+        initializer {
+            TransactionEditorViewModel(
                 inventoryApplication(),
+                this.createSavedStateHandle(),
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository
@@ -111,7 +121,8 @@ object AppViewModelProvider {
             ReportsViewModel(
                 inventoryApplication().container.getCategoryBreakdownUseCase,
                 inventoryApplication().container.getMonthlyTrendUseCase,
-                inventoryApplication().container.getFixedVsDiscretionaryUseCase
+                inventoryApplication().container.getFixedVsDiscretionaryUseCase,
+                inventoryApplication().container.userPreferencesRepository
             )
         }
         initializer {

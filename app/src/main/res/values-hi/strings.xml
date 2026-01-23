@@ -1,0 +1,185 @@
+<resources>
+    <string name="app_name">PayWise</string>
+
+    <!-- General -->
+    <string name="ok">ठीक है</string>
+    <string name="cancel">रद्द करें</string>
+    <string name="save">सहेजें</string>
+    <string name="delete">मिटाएं</string>
+    <string name="undo">वापस लाएं</string>
+    <string name="confirm">पुष्टि करें</string>
+    <string name="next">अगला</string>
+    <string name="skip">छोड़ें</string>
+    <string name="get_started">शुरू करें</string>
+    <string name="back">पीछे</string>
+    <string name="edit">संपादित करें</string>
+    <string name="set">सेट करें</string>
+    <string name="none">कोई नहीं</string>
+    <string name="other">अन्य</string>
+    <string name="unknown">अज्ञात</string>
+    <string name="uncategorized">बिना श्रेणी के</string>
+    <string name="loading">लोड हो रहा है...</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">होम</string>
+    <string name="nav_budgets">बजट</string>
+    <string name="nav_recurring">नियमित</string>
+    <string name="nav_reports">रिपोर्ट</string>
+    <string name="nav_profile">प्रोफ़ाइल</string>
+
+    <!-- Home Screen -->
+    <string name="total_spent">कुल खर्च</string>
+    <string name="income">आय</string>
+    <string name="savings">बचत</string>
+    <string name="budget">बजट</string>
+    <string name="quick_actions">त्वरित क्रियाएं</string>
+    <string name="planned_commitments">नियोजित खर्च</string>
+    <string name="top_spending">शीर्ष खर्च</string>
+    <string name="recent_activity">हाल की गतिविधि</string>
+    <string name="see_all">सभी देखें</string>
+    <string name="missing_salary_title">सैलरी नहीं जुड़ी?</string>
+    <string name="missing_salary_subtitle">अपनी बचत को ट्रैक करने के लिए सैलरी जोड़ें।</string>
+    <string name="add_now">अभी जोड़ें</string>
+    <string name="no_transactions">कोई लेनदेन नहीं</string>
+    <string name="no_transactions_subtitle">इस चक्र की आपकी गतिविधि यहाँ दिखाई देगी।</string>
+    <string name="no_transactions_hint">अपना पहला खर्च जोड़ने के लिए + दबाएं</string>
+    <string name="salary_based">सैलरी-आधारित</string>
+    <string name="planned">नियोजित</string>
+    <string name="posted">दर्ज</string>
+    <string name="above_plan">योजना से अधिक</string>
+    <string name="under_plan">योजना से कम</string>
+    <string name="add_expense_fab">खर्च जोड़ें</string>
+    <string name="new_rule_fab">नया नियम</string>
+
+    <!-- Quick Actions -->
+    <string name="action_expense">खर्च</string>
+    <string name="action_salary">सैलरी</string>
+    <string name="action_transfer">ट्रांसफर</string>
+    <string name="action_recurring">नियमित</string>
+
+    <!-- Budget Status -->
+    <string name="budget_not_set">बजट सेट करें</string>
+    <string name="budget_on_track">सही चल रहा है</string>
+    <string name="budget_near_limit">सीमा के पास</string>
+    <string name="budget_over_budget">बजट से बाहर</string>
+
+    <!-- Add Transaction Screen -->
+    <string name="new_expense">नया खर्च</string>
+    <string name="add_salary">सैलरी जोड़ें</string>
+    <string name="new_income">नई आय</string>
+    <string name="new_transfer">नया ट्रांसफर</string>
+    <string name="enter_amount">राशि दर्ज करें</string>
+    <string name="select_account">खाता चुनें</string>
+    <string name="select_category">श्रेणी चुनें</string>
+    <string name="select_date">तारीख चुनें</string>
+    <string name="note_optional">नोट (वैकल्पिक)</string>
+    <string name="save_transaction">लेनदेन सहेजें</string>
+    <string name="no_accounts_found">कोई खाता नहीं मिला। डिफॉल्ट बनाने के लिए टैप करें।</string>
+    <string name="no_categories_found">कोई श्रेणी नहीं मिली। डिफॉल्ट बनाने के लिए टैप करें।</string>
+
+    <!-- Recurring Screen -->
+    <string name="add_recurring">नियमित खर्च जोड़ें</string>
+    <string name="title">शीर्षक</string>
+    <string name="amount_rupees">राशि (रुपये)</string>
+    <string name="due_day">देय दिन</string>
+    <string name="day_x">दिन %1$d</string>
+    <string name="last_day_of_month">महीने का आखिरी दिन</string>
+    <string name="lead_days">रिमाइंडर के दिन पहले</string>
+    <string name="auto_post">देय तिथि पर अपने आप जोड़ें</string>
+    <string name="save_recurring">नियमित खर्च सहेजें</string>
+    <string name="bills_and_emis">बिल और ईएमआई</string>
+    <string name="active">सक्रिय</string>
+    <string name="skipped">छोड़ा गया</string>
+    <string name="overdue">समय सीमा समाप्त</string>
+    <string name="mark_paid">भुगतान किया</string>
+    <string name="skip_this_month">छोड़ें</string>
+    <string name="unskip">वापस लाएं</string>
+    <string name="history">इतिहास</string>
+    <string name="confirm_payment_title">भुगतान की पुष्टि करें</string>
+    <string name="pay_item_q">%1$s का भुगतान करें?</string>
+    <string name="skip_month_q">इस महीने छोड़ें?</string>
+    <string name="skip_month_desc">यह केवल %1$s के लिए ऑटो-पोस्ट और रिमाइंडर बंद कर देगा।</string>
+    <string name="no_rules_found">कोई नियम नहीं मिला</string>
+    <string name="no_rules_subtitle">आपने %1$s के लिए कोई नियमित बिल या ईएमआई सेट नहीं की है।</string>
+    <string name="marked_paid_snackbar">भुगतान किया गया</string>
+    <string name="payment_deleted_snackbar">भुगतान हटाया गया</string>
+    <string name="enable_reminders">रिमाइंडर सक्षम करें</string>
+    <string name="enable">सक्षम करें</string>
+    <string name="delete_payment_title">भुगतान हटाएं?</string>
+    <string name="delete_payment_desc">क्या आप वाकई इस भुगतान रिकॉर्ड को हटाना चाहते हैं?</string>
+    <string name="paid_this_month">इस महीने भुगतान किया गया</string>
+    <string name="not_paid_this_month">इस महीने भुगतान नहीं किया गया</string>
+    <string name="due_on_last_day">आखिरी दिन देय</string>
+    <string name="due_on_day_x">दिन %1$d को देय</string>
+
+    <!-- Reports Screen -->
+    <string name="report_breakdown">ब्रेकडाउन</string>
+    <string name="report_trend">ट्रेंड</string>
+    <string name="report_groups">समूह</string>
+    <string name="last_12_months">पिछले 12 महीने</string>
+    <string name="average">औसत</string>
+    <string name="highest">उच्चतम</string>
+    <string name="fixed">निश्चित</string>
+    <string name="discretionary">वैकल्पिक</string>
+    <string name="fixed_helper">किराया, ईएमआई, उपयोगिताएं, आदि।</string>
+    <string name="discretionary_helper">भोजन, मनोरंजन, खरीदारी, आदि।</string>
+    <string name="select_date_range">तारीख सीमा चुनें</string>
+    <string name="of_total">कुल का %1$d%%</string>
+    <string name="no_expenses_found">कोई खर्च नहीं मिला</string>
+    <string name="no_expenses_subtitle">कोई अन्य अवधि चुनकर देखें या नया खर्च जोड़ें।</string>
+
+    <!-- Budgets Screen -->
+    <string name="monthly_budget">मासिक बजट</string>
+    <string name="category_budgets">श्रेणी बजट</string>
+    <string name="copy_last_month">पिछले महीने से कॉपी करें</string>
+    <string name="set_budget_for_x">%1$s के लिए बजट सेट करें</string>
+    <string name="spent">खर्च किया</string>
+    <string name="remaining">शेष</string>
+    <string name="no_budget_set">बजट सेट नहीं है</string>
+    <string name="budget_x">बजट: %1$s</string>
+
+    <!-- Settings Screen -->
+    <string name="settings">सेटिंग्स</string>
+    <string name="data_and_backup">डेटा और बैकअप</string>
+    <string name="automated_backups">ऑटोमेटेड बैकअप</string>
+    <string name="auto_backup_desc">PayWise सप्ताह में एक बार आपके डेटा का बैकअप अपने आप Documents फ़ोल्डर में लेता है।</string>
+    <string name="last_auto_backup">पिछला ऑटो-बैकअप: %1$s</string>
+    <string name="manual_actions">मैनुअल क्रियाएं</string>
+    <string name="export_csv">लेनदेन निर्यात करें (CSV)</string>
+    <string name="export_json">पूर्ण बैकअप निर्यात करें (JSON)</string>
+    <string name="import_json">बैकअप आयात करें (.json)</string>
+    <string name="import_warning">महत्वपूर्ण: बैकअप आयात करने से वर्तमान डेटा बदल जाएगा। आगे बढ़ने से पहले सुनिश्चित करें कि आपके पास हालिया निर्यात है।</string>
+    <string name="security">सुरक्षा</string>
+    <string name="enable_app_lock">ऐप लॉक सक्षम करें</string>
+    <string name="set_pin">पिन सेट करें</string>
+    <string name="change_pin">पिन बदलें</string>
+    <string name="use_biometric">बायोमेट्रिक का उपयोग करें</string>
+    <string name="auto_lock_timer">ऑटो-लॉक टाइमर</string>
+    <string name="minutes_x">%1$d मिनट</string>
+    <string name="salary_pay_cycle">सैलरी और वेतन चक्र</string>
+    <string name="use_salary_cycle">सैलरी-आधारित चक्र का उपयोग करें</string>
+    <string name="salary_day_x">सैलरी का दिन: %1$s</string>
+    <string name="last_day">आखिरी दिन</string>
+    <string name="salary_cycle_desc">आपका महीना सैलरी के दिन के अगले दिन से शुरू होगा।</string>
+    <string name="language">भाषा</string>
+    <string name="privacy_policy">गोपनीयता नीति</string>
+    <string name="restore_success">रीस्टोर सफल रहा!</string>
+    <string name="exported_filename">निर्यात किया गया: %1$s</string>
+    <string name="backup_saved_filename">बैकअप सहेजा गया: %1$s</string>
+
+    <!-- App Lock -->
+    <string name="unlock_paywise">PayWise अनलॉक करें</string>
+    <string name="invalid_pin">गलत पिन</string>
+    <string name="too_many_attempts">बहुत अधिक प्रयास। %1$d सेकंड में फिर से कोशिश करें।</string>
+    <string name="biometric_title">PayWise के लिए बायोमेट्रिक लॉगिन</string>
+    <string name="biometric_subtitle">अपने बायोमेट्रिक क्रेडेंशियल का उपयोग करके लॉगिन करें</string>
+    <string name="biometric_negative_button">पिन का उपयोग करें</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_title_1">खर्च ट्रैक करें</string>
+    <string name="onboarding_subtitle_1">जानें कि आपका पैसा कहाँ जाता है।</string>
+    <string name="onboarding_title_2">बिल और ईएमआई की योजना बनाएं</string>
+    <string name="onboarding_subtitle_2">रिमाइंडर के साथ देय तिथि कभी न भूलें।</string>
+    <string name="onboarding_title_3">बचत बढ़ाएं</string>
+    <string name="onboarding_subtitle_3">बजट सेट करें और सही रास्ते पर रहें।</string>
+</resources>

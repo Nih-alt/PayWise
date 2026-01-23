@@ -4,6 +4,7 @@ import androidx.room.TypeConverter
 import com.nihal.paywise.domain.model.AccountType
 import com.nihal.paywise.domain.model.CategoryKind
 import com.nihal.paywise.domain.model.RecurringStatus
+import com.nihal.paywise.domain.model.SpendingGroup
 import com.nihal.paywise.domain.model.TransactionType
 import java.time.Instant
 
@@ -56,5 +57,15 @@ class PayWiseConverters {
     @TypeConverter
     fun toRecurringStatus(value: String): RecurringStatus {
         return RecurringStatus.valueOf(value)
+    }
+
+    @TypeConverter
+    fun fromSpendingGroup(value: SpendingGroup): String {
+        return value.name
+    }
+
+    @TypeConverter
+    fun toSpendingGroup(value: String): SpendingGroup {
+        return SpendingGroup.valueOf(value)
     }
 }

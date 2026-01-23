@@ -7,6 +7,7 @@ import com.nihal.paywise.domain.model.Account
 import com.nihal.paywise.domain.model.AccountType
 import com.nihal.paywise.domain.model.Category
 import com.nihal.paywise.domain.model.CategoryKind
+import com.nihal.paywise.domain.model.SpendingGroup
 import java.util.UUID
 
 class DatabaseSeeder(
@@ -37,15 +38,17 @@ class DatabaseSeeder(
         // Seed Expense Categories
         if (categoryRepository.getCategoryCountByKind(CategoryKind.EXPENSE) == 0) {
             Log.d(TAG, "Seeding default expense categories...")
-            val expenses = listOf(
-                "Rent", "EMI", "Utilities", "Mobile", "Internet", "DTH", "Groceries", "Fuel", "Commute",
-                "Insurance", "Subscriptions", "Maintenance/Society", "Kids/School", "Fees",
-                "Dining", "Shopping", "Medical", "Gifts", "Travel", "Household Help", "Parking/Toll",
-                "Taxes", "Misc"
-            )
-            expenses.forEach { name ->
+            val fixed = listOf("Rent", "EMI", "Utilities", "Mobile", "Internet", "DTH", "Insurance", "Subscriptions", "Kids/School", "Fees")
+            val discretionary = listOf("Groceries", "Fuel", "Commute", "Maintenance/Society", "Dining", "Shopping", "Medical", "Gifts", "Travel", "Household Help", "Parking/Toll", "Taxes", "Misc")
+            
+            fixed.forEach { name ->
                 categoryRepository.insertCategory(
-                    Category(UUID.randomUUID().toString(), name, 0xFF808080, CategoryKind.EXPENSE, null)
+                    Category(UUID.randomUUID().toString(), name, 0xFF808080, CategoryKind.EXPENSE, SpendingGroup.FIXED, null)
+                )
+            }
+            discretionary.forEach { name ->
+                categoryRepository.insertCategory(
+                    Category(UUID.randomUUID().toString(), name, 0xFF808080, CategoryKind.EXPENSE, SpendingGroup.DISCRETIONARY, null)
                 )
             }
             Log.d(TAG, "Expense categories seeded.")
@@ -57,7 +60,7 @@ class DatabaseSeeder(
             val incomes = listOf("Salary", "Bonus", "Interest", "Refunds/Reimbursements")
             incomes.forEach { name ->
                 categoryRepository.insertCategory(
-                    Category(UUID.randomUUID().toString(), name, 0xFF4CAF50, CategoryKind.INCOME, null)
+                    Category(UUID.randomUUID().toString(), name, 0xFF4CAF50, CategoryKind.INCOME, SpendingGroup.DISCRETIONARY, null)
                 )
             }
             Log.d(TAG, "Income categories seeded.")

@@ -1,6 +1,8 @@
 package com.nihal.paywise.data.repository
 
 import com.nihal.paywise.data.local.dao.TransactionDao
+import com.nihal.paywise.domain.model.CategoryBreakdownRow
+import com.nihal.paywise.domain.model.SpendingGroupRow
 import com.nihal.paywise.domain.model.Transaction
 import com.nihal.paywise.domain.model.toDomain
 import com.nihal.paywise.domain.model.toEntity
@@ -17,6 +19,12 @@ class OfflineTransactionRepository(private val transactionDao: TransactionDao) :
 
     override fun getTransactionsBetweenStream(start: Instant, end: Instant): Flow<List<Transaction>> = 
         transactionDao.observeBetween(start, end).map { list -> list.map { it.toDomain() } }
+
+    override fun getCategoryBreakdownStream(start: Instant, end: Instant): Flow<List<CategoryBreakdownRow>> =
+        transactionDao.getCategoryBreakdown(start, end)
+
+    override fun getSpendingGroupStatsStream(start: Instant, end: Instant): Flow<List<SpendingGroupRow>> =
+        transactionDao.getSpendingGroupStats(start, end)
         
     override fun getTransactionsByAccountStream(accountId: String): Flow<List<Transaction>> = 
         transactionDao.observeByAccount(accountId).map { list -> list.map { it.toDomain() } }
@@ -41,6 +49,9 @@ class OfflineTransactionRepository(private val transactionDao: TransactionDao) :
         
     override suspend fun insertTransaction(transaction: Transaction) = 
         transactionDao.insert(transaction.toEntity())
+
+    override suspend fun updateTransaction(transaction: Transaction) =
+        transactionDao.insert(transaction.toEntity()) // Room's @Insert(onConflict = OnConflictStrategy.REPLACE) handles update
         
     override suspend fun deleteTransaction(transaction: Transaction) = 
         transactionDao.delete(transaction.toEntity())

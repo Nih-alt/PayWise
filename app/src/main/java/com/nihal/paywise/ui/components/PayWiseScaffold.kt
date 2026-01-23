@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.AssistChip
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.nihal.paywise.util.DateTimeFormatterUtil
@@ -51,13 +53,16 @@ import java.time.YearMonth
 fun PayWiseScaffold(
     navController: NavHostController,
     snackbarHostState: SnackbarHostState,
+    showFab: Boolean = true,
     content: @Composable (androidx.compose.foundation.layout.PaddingValues) -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
     val currentRoute = currentDestination?.route
 
-    val isMainScreen = currentRoute == "home" || currentRoute == "recurring_list" || currentRoute == "budgets"
+    val isMainScreen = currentRoute == "home" || currentRoute == "transactions" || 
+                       currentRoute == "budgets" || currentRoute == "reports" || 
+                       currentRoute == "settings"
     val isOnboardingScreen = currentRoute == "onboarding"
 
     Scaffold(
@@ -120,8 +125,8 @@ fun PayWiseScaffold(
                 ) {
                     val items = listOf(
                         Triple("home", "Home", Icons.Default.Home),
+                        Triple("transactions", "Activity", Icons.Default.ReceiptLong),
                         Triple("budgets", "Budgets", Icons.Default.Wallet),
-                        Triple("recurring_list", "Recurring", Icons.AutoMirrored.Filled.List),
                         Triple("reports", "Reports", Icons.Default.AccountBalance),
                         Triple("settings", "Profile", Icons.Default.Settings)
                     )
@@ -133,12 +138,12 @@ fun PayWiseScaffold(
                             label = { Text(label) },
                             selected = selected,
                             onClick = {
-                                if (route == "home" || route == "recurring_list" || route == "budgets" || route == "reports" || route == "settings") {
-                                    navController.navigate(route) {
-                                        popUpTo("home") { saveState = true }
-                                        launchSingleTop = true
-                                        restoreState = true
+                                navController.navigate(route) {
+                                    popUpTo("main") {
+                                        saveState = true
                                     }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -153,13 +158,13 @@ fun PayWiseScaffold(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = isMainScreen && currentRoute != "budgets",
+                visible = showFab && isMainScreen && currentRoute != "home" && currentRoute != "budgets" && currentRoute != "settings",
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        if (currentRoute == "home") navController.navigate("add_txn")
+                        if (currentRoute == "home" || currentRoute == "transactions") navController.navigate("transaction_add?type=EXPENSE")
                         else navController.navigate("add_recurring")
                     },
                     containerColor = MaterialTheme.colorScheme.primary,

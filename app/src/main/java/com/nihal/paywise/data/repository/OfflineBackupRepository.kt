@@ -78,8 +78,8 @@ class OfflineBackupRepository(
 private fun AccountEntity.toBackup() = AccountBackup(id, name, type.name, openingBalancePaise)
 private fun AccountBackup.toEntity() = AccountEntity(id, name, AccountType.valueOf(type), openingBalancePaise)
 
-private fun CategoryEntity.toBackup() = CategoryBackup(id, name, color, kind.name, parentId)
-private fun CategoryBackup.toEntity() = CategoryEntity(id, name, color, CategoryKind.valueOf(kind), parentId)
+private fun CategoryEntity.toBackup() = CategoryBackup(id, name, color, kind.name, spendingGroup.name, parentId)
+private fun CategoryBackup.toEntity() = CategoryEntity(id, name, color, CategoryKind.valueOf(kind), SpendingGroup.valueOf(spendingGroup), parentId)
 
 private fun TransactionEntity.toBackup() = TransactionBackup(id, amountPaise, timestamp, type.name, accountId, counterAccountId, categoryId, note, recurringId, splitOfTransactionId)
 private fun TransactionBackup.toEntity() = TransactionEntity(id, amountPaise, timestamp, TransactionType.valueOf(type), accountId, counterAccountId, categoryId, note, recurringId, splitOfTransactionId)

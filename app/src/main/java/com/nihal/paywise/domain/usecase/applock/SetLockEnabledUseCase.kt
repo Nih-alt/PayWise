@@ -6,6 +6,6 @@ class SetLockEnabledUseCase(
     private val appLockRepository: AppLockRepository
 ) {
     suspend operator fun invoke(enabled: Boolean) {
-        appLockRepository.setAppLockEnabled(enabled)
+        appLockRepository.setLockEnabled(enabled)
     }
 }

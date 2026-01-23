@@ -8,19 +8,26 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nihal.paywise.data.local.AppLockSettings
 import com.nihal.paywise.data.local.UserPreferencesRepository
+import com.nihal.paywise.data.local.BackupMetadata
 import com.nihal.paywise.data.repository.BackupRepository
-import com.nihal.paywise.domain.usecase.applock.GetAppLockSettingsUseCase
-import com.nihal.paywise.domain.usecase.applock.SetAutoLockMinutesUseCase
-import com.nihal.paywise.domain.usecase.applock.SetBiometricEnabledUseCase
-import com.nihal.paywise.domain.usecase.applock.SetLockEnabledUseCase
-import com.nihal.paywise.domain.usecase.applock.SetPinUseCase
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import com.nihal.paywise.domain.model.SalarySettings
+import com.nihal.paywise.domain.usecase.applock.*
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
+
+data class SettingsUiState(
+    val language: String = "en",
+    val theme: String = "SYSTEM",
+    val notificationsEnabled: Boolean = true,
+    val salarySettings: SalarySettings = SalarySettings(),
+    val appLockSettings: AppLockSettings? = null,
+    val backupMetadata: BackupMetadata? = null,
+    val appVersion: String = "1.0.0"
+)
 
 class SettingsViewModel(
     private val backupRepository: BackupRepository,
@@ -32,34 +39,54 @@ class SettingsViewModel(
     private val setAutoLockMinutesUseCase: SetAutoLockMinutesUseCase
 ) : ViewModel() {
 
-    val backupMetadata = userPreferencesRepository.backupMetadata
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-    
-    val appLockSettings = getAppLockSettingsUseCase()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val uiState: StateFlow<SettingsUiState> = combine(
+        userPreferencesRepository.appLanguageFlow,
+        userPreferencesRepository.appThemeFlow,
+        userPreferencesRepository.notificationsEnabledFlow,
+        userPreferencesRepository.salarySettingsFlow,
+        getAppLockSettingsUseCase(),
+        userPreferencesRepository.backupMetadata
+    ) { flows ->
+        SettingsUiState(
+            language = flows[0] as String,
+            theme = flows[1] as String,
+            notificationsEnabled = flows[2] as Boolean,
+            salarySettings = flows[3] as SalarySettings,
+            appLockSettings = flows[4] as AppLockSettings?,
+            backupMetadata = flows[5] as BackupMetadata?
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = SettingsUiState()
+    )
 
-    fun setAppLockEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            setLockEnabledUseCase(enabled)
-        }
+    fun setLanguage(lang: String) {
+        viewModelScope.launch { userPreferencesRepository.updateAppLanguage(lang) }
     }
 
-    fun setPin(pin: String) {
-        viewModelScope.launch {
-            setPinUseCase(pin)
-        }
+    fun setTheme(theme: String) {
+        viewModelScope.launch { userPreferencesRepository.updateAppTheme(theme) }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.updateNotificationsEnabled(enabled) }
+    }
+
+    fun updateSalarySettings(settings: SalarySettings) {
+        viewModelScope.launch { userPreferencesRepository.updateSalarySettings(settings) }
+    }
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        viewModelScope.launch { setLockEnabledUseCase(enabled) }
     }
 
     fun setBiometricEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            setBiometricEnabledUseCase(enabled)
-        }
+        viewModelScope.launch { setBiometricEnabledUseCase(enabled) }
     }
 
     fun setAutoLockMinutes(minutes: Int) {
-        viewModelScope.launch {
-            setAutoLockMinutesUseCase(minutes)
-        }
+        viewModelScope.launch { setAutoLockMinutesUseCase(minutes) }
     }
 
     fun exportCsv(context: Context, onSuccess: (String) -> Unit, onError: (String) -> Unit) {

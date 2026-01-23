@@ -139,7 +139,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val getCategoryBreakdownUseCase: GetCategoryBreakdownUseCase by lazy {
-        GetCategoryBreakdownUseCase(transactionRepository, categoryRepository)
+        GetCategoryBreakdownUseCase(transactionRepository)
     }
 
     override val getMonthlyTrendUseCase: GetMonthlyTrendUseCase by lazy {
@@ -147,7 +147,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val getFixedVsDiscretionaryUseCase: GetFixedVsDiscretionaryUseCase by lazy {
-        GetFixedVsDiscretionaryUseCase(transactionRepository, categoryRepository)
+        GetFixedVsDiscretionaryUseCase(transactionRepository)
     }
 
     override val getAppLockSettingsUseCase: GetAppLockSettingsUseCase by lazy {

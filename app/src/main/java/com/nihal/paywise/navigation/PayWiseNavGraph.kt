@@ -7,23 +7,27 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.navigation.NotificationNavRequest
-import com.nihal.paywise.ui.addtxn.AddTransactionScreen
+import com.nihal.paywise.ui.addtxn.TransactionEditorScreen
 import com.nihal.paywise.ui.home.HomeScreen
 import com.nihal.paywise.ui.onboarding.OnboardingScreen
 import com.nihal.paywise.ui.onboarding.OnboardingViewModel
 import com.nihal.paywise.ui.recurring.AddRecurringScreen
 import com.nihal.paywise.ui.recurring.RecurringHistoryScreen
 import com.nihal.paywise.ui.recurring.RecurringListScreen
+import com.nihal.paywise.ui.transactions.TransactionsListScreen
 import com.nihal.paywise.ExpenseTrackerApp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.SnackbarHostState
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.nihal.paywise.ui.splash.StartRouteScreen
 import com.nihal.paywise.ui.budgets.BudgetsScreen
 import com.nihal.paywise.ui.reports.ReportsScreen
 import com.nihal.paywise.ui.settings.SettingsScreen
+import com.nihal.paywise.ui.settings.PrivacyScreen
 import com.nihal.paywise.ui.settings.setpin.SetPinScreen
 import com.nihal.paywise.ui.lock.LockScreen
 
@@ -34,6 +38,7 @@ fun PayWiseNavHost(
     onboardingCompleted: Boolean,
     isLocked: Boolean,
     onUnlock: () -> Unit,
+    onFabVisibilityChange: (Boolean) -> Unit = {},
     navRequest: NotificationNavRequest? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -55,12 +60,12 @@ fun PayWiseNavHost(
                 userPreferencesRepository = appContainer.userPreferencesRepository,
                 onNavigateToOnboarding = {
                     navController.navigate("onboarding") {
-                        popUpTo("lock") { inclusive = true }
+                        popUpTo("start") { inclusive = true }
                     }
                 },
                 onNavigateToHome = {
-                    navController.navigate("home") {
-                        popUpTo("lock") { inclusive = true }
+                    navController.navigate("main") {
+                        popUpTo("start") { inclusive = true }
                     }
                 }
             )
@@ -70,7 +75,7 @@ fun PayWiseNavHost(
             OnboardingScreen(
                 onFinish = {
                     onboardingViewModel.completeOnboarding()
-                    navController.navigate("home") {
+                    navController.navigate("main") {
                         popUpTo("onboarding") {
                             inclusive = true
                         }
@@ -78,45 +83,73 @@ fun PayWiseNavHost(
                 }
             )
         }
-        composable("home") {
-            HomeScreen(
-                onAddClick = { navController.navigate("add_txn") },
-                onRecurringClick = { navController.navigate("recurring_list") },
-                onBudgetClick = { navController.navigate("budgets") }
-            )
+
+        navigation(startDestination = "home", route = "main") {
+            composable("home") {
+                HomeScreen(
+                    onAddClick = { type -> navController.navigate("transaction_add?type=$type") },
+                    onAddSalaryClick = { label -> navController.navigate("transaction_add?type=INCOME&cycleLabel=$label") },
+                    onRecurringClick = { navController.navigate("recurring_list") },
+                    onBudgetClick = { navController.navigate("budgets") },
+                    onFabVisibilityChange = onFabVisibilityChange
+                )
+            }
+            composable("transactions") {
+                TransactionsListScreen(
+                    onTransactionClick = { id -> navController.navigate("transaction_edit/$id") },
+                    onAddClick = { navController.navigate("transaction_add?type=EXPENSE") }
+                )
+            }
+            composable("budgets") {
+                BudgetsScreen()
+            }
+            composable("reports") {
+                ReportsScreen()
+            }
+            composable("settings") {
+                SettingsScreen(
+                    snackbarHostState = snackbarHostState,
+                    onImportSuccess = {
+                        navController.navigate("home") {
+                            popUpTo("main") { inclusive = true }
+                        }
+                    },
+                    onSetPinClick = { navController.navigate("set_pin") },
+                    onPrivacyClick = { navController.navigate("privacy") }
+                )
+            }
+            composable("recurring_list") {
+                RecurringListScreen(
+                    snackbarHostState = snackbarHostState,
+                    onAddRecurringClick = { navController.navigate("add_recurring") },
+                    onHistoryClick = { id -> navController.navigate("recurring_history/$id") }
+                )
+            }
         }
-        composable("budgets") {
-            BudgetsScreen()
-        }
-        composable("reports") {
-            ReportsScreen()
-        }
-        composable("settings") {
-            SettingsScreen(
-                snackbarHostState = snackbarHostState,
-                onImportSuccess = {
-                    navController.navigate("home") {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onSetPinClick = { navController.navigate("set_pin") }
-            )
-        }
+
         composable("set_pin") {
             SetPinScreen(
                 onPinSet = { navController.popBackStack() }
             )
         }
-        composable("add_txn") {
-            AddTransactionScreen(navigateBack = { navController.popBackStack() })
-        }
-        composable("recurring_list") {
-            RecurringListScreen(
-                snackbarHostState = snackbarHostState,
-                onAddRecurringClick = { navController.navigate("add_recurring") },
-                onHistoryClick = { id -> navController.navigate("recurring_history/$id") }
+
+        composable(
+            route = "transaction_add?type={type}&cycleLabel={cycleLabel}",
+            arguments = listOf(
+                navArgument("type") { type = NavType.StringType; defaultValue = "EXPENSE" },
+                navArgument("cycleLabel") { type = NavType.StringType; nullable = true; defaultValue = null }
             )
+        ) {
+            TransactionEditorScreen(navigateBack = { navController.popBackStack() })
         }
+
+        composable(
+            route = "transaction_edit/{transactionId}",
+            arguments = listOf(navArgument("transactionId") { type = NavType.StringType })
+        ) {
+            TransactionEditorScreen(navigateBack = { navController.popBackStack() })
+        }
+
         composable(
             route = "recurring_history/{recurringId}",
             arguments = listOf(navArgument("recurringId") { type = NavType.StringType })
@@ -125,6 +158,9 @@ fun PayWiseNavHost(
         }
         composable("add_recurring") {
             AddRecurringScreen(navigateBack = { navController.popBackStack() })
+        }
+        composable("privacy") {
+            PrivacyScreen(onBack = { navController.popBackStack() })
         }
     }
 }

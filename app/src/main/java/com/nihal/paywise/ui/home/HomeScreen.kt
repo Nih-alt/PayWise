@@ -1,121 +1,205 @@
 package com.nihal.paywise.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nihal.paywise.R
 import com.nihal.paywise.di.AppViewModelProvider
 import com.nihal.paywise.domain.model.TransactionType
 import com.nihal.paywise.ui.components.*
-import java.time.YearMonth
-import com.nihal.paywise.util.DateTimeFormatterUtil
-
 import com.nihal.paywise.ui.util.CategoryVisuals
 
 @Composable
 fun HomeScreen(
-    onAddClick: () -> Unit,
+    onAddClick: (String) -> Unit,
+    onAddSalaryClick: (String) -> Unit,
     onRecurringClick: () -> Unit,
     onBudgetClick: () -> Unit,
+    onFabVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
     val transactions by viewModel.transactions.collectAsState()
     val summary by viewModel.summary.collectAsState()
     val categories by viewModel.categorySummary.collectAsState()
+    val plannedVsActual by viewModel.plannedVsActual.collectAsState()
+    val showSalaryPrompt by viewModel.showSalaryPrompt.collectAsState()
+    
+    var showAddSheet by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = 24.dp)
-    ) {
-        // 1. Hero Card
-        item {
-            Spacer(modifier = Modifier.height(8.dp))
-            HeroCard(
-                month = DateTimeFormatterUtil.formatYearMonth(YearMonth.now()),
-                totalSpent = summary.totalExpense,
-                summary = summary,
-                onBudgetClick = onBudgetClick
-            )
-        }
+    LaunchedEffect(transactions) {
+        // Always hide the global FAB on Home, as we use an anchored button
+        onFabVisibilityChange(false)
+    }
 
-        // 2. Quick Actions
-        item {
-            SectionHeader(title = "Quick Actions")
-            QuickActionsRow(
-                onAddExpense = onAddClick,
-                onRecurring = onRecurringClick
-            )
-        }
-
-        // 3. Category Summary
-        if (categories.isNotEmpty()) {
-            item {
-                SectionHeader(title = "Top Spending")
-                CategorySummaryRow(categories)
+    if (showAddSheet) {
+        AddActionSheet(
+            onDismiss = { showAddSheet = false },
+            onActionSelected = { type ->
+                showAddSheet = false
+                onAddClick(type)
             }
-        }
+        )
+    }
 
-        // 4. Recent Transactions
-        item {
-            SectionHeader(
-                title = "Recent Activity",
-                actionText = if (transactions.isEmpty()) null else "See all",
-                onActionClick = { /* Navigate to all transactions */ }
-            )
-        }
-
-        if (transactions.isEmpty()) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 100.dp) // Space for anchored button
+        ) {
+            // 1. Hero Card
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Spacer(modifier = Modifier.height(8.dp))
+                HeroCard(
+                    month = summary.cycleLabel,
+                    totalSpent = summary.totalExpense,
+                    summary = summary,
+                    onBudgetClick = onBudgetClick
+                )
+            }
+
+            // Salary Prompt
+            item {
+                AnimatedVisibility(
+                    visible = showSalaryPrompt,
+                    enter = expandVertically(),
+                    exit = shrinkVertically()
                 ) {
-                    EmptyState(
-                        icon = Icons.Default.Info,
-                        title = "No transactions",
-                        subtitle = "Your activity for this month will appear here.",
-                        hint = "Tap + to add your first expense"
-                    )
-                }
-            }
-        } else {
-            item {
-                SoftCard(modifier = Modifier.fillMaxWidth()) {
-                    transactions.take(5).forEachIndexed { index, tx ->
-                        TransactionRowItem(tx)
-                        if (index < transactions.take(5).size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
-                            )
+                    Surface(
+                        modifier = Modifier.padding(top = 16.dp).fillMaxWidth(),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.missing_salary_title), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.missing_salary_subtitle), style = MaterialTheme.typography.bodySmall)
+                            }
+                            TextButton(onClick = { onAddSalaryClick(summary.cycleLabel) }) {
+                                Text(stringResource(R.string.add_now))
+                            }
                         }
                     }
                 }
+            }
+
+            // 2. Quick Actions
+            item {
+                SectionHeader(title = stringResource(R.string.quick_actions))
+                QuickActionsRow(
+                    onAddExpense = { onAddClick("EXPENSE") },
+                    onAddSalary = { onAddSalaryClick(summary.cycleLabel) },
+                    onRecurring = onRecurringClick
+                )
+            }
+
+            // Planned vs Actual
+            if (plannedVsActual != null) {
+                item {
+                    SectionHeader(title = stringResource(R.string.planned_commitments))
+                    PlannedVsActualCard(plannedVsActual!!)
+                }
+            }
+
+            // 3. Category Summary
+            if (categories.isNotEmpty()) {
+                item {
+                    SectionHeader(title = stringResource(R.string.top_spending))
+                    CategorySummaryRow(categories)
+                }
+            }
+
+            // 4. Recent Transactions
+            item {
+                SectionHeader(
+                    title = stringResource(R.string.recent_activity),
+                    actionText = if (transactions.isEmpty()) null else stringResource(R.string.see_all),
+                    onActionClick = { /* Navigate to all transactions */ }
+                )
+            }
+
+            if (transactions.isEmpty()) {
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        EmptyState(
+                            icon = Icons.Default.Info,
+                            title = stringResource(R.string.no_transactions),
+                            subtitle = stringResource(R.string.no_transactions_subtitle),
+                            hint = "Tap the Add button below to start tracking"
+                        )
+                    }
+                }
+            } else {
+                item {
+                    SoftCard(modifier = Modifier.fillMaxWidth()) {
+                        transactions.take(5).forEachIndexed { index, tx ->
+                            TransactionRowItem(tx)
+                            if (index < transactions.take(5).size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Unified Anchored Add Button
+        Surface(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = 16.dp, start = 16.dp, end = 16.dp),
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            tonalElevation = 8.dp,
+            shadowElevation = 4.dp,
+            onClick = { showAddSheet = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Add Transaction", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -137,7 +221,7 @@ fun HeroCard(
         Column(modifier = Modifier.padding(24.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.DateRange,
+                    Icons.Default.CalendarMonth,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.primary
@@ -149,13 +233,27 @@ fun HeroCard(
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
+                if (summary.isSalaryCycle) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            stringResource(R.string.salary_based),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 
                 val statusText = when(summary.budgetStatus) {
-                    HomeBudgetStatus.NOT_SET -> "Set Budget"
-                    HomeBudgetStatus.ON_TRACK -> "On Track"
-                    HomeBudgetStatus.NEAR_LIMIT -> "Near Limit"
-                    HomeBudgetStatus.OVER_BUDGET -> "Over Budget"
+                    HomeBudgetStatus.NOT_SET -> stringResource(R.string.budget_not_set)
+                    HomeBudgetStatus.ON_TRACK -> stringResource(R.string.budget_on_track)
+                    HomeBudgetStatus.NEAR_LIMIT -> stringResource(R.string.budget_near_limit)
+                    HomeBudgetStatus.OVER_BUDGET -> stringResource(R.string.budget_over_budget)
                 }
                 
                 val statusColor = when(summary.budgetStatus) {
@@ -182,7 +280,7 @@ fun HeroCard(
 
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Total Spent",
+                text = stringResource(R.string.total_spent),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
             )
@@ -198,31 +296,31 @@ fun HeroCard(
             ) {
                 Column {
                     Text(
-                        "Income",
+                        stringResource(R.string.income),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
-                    Text("--", style = MaterialTheme.typography.titleSmall)
+                    Text(summary.totalIncome, style = MaterialTheme.typography.titleSmall)
                 }
                 Column {
                     Text(
-                        "Savings",
+                        stringResource(R.string.savings),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
-                    Text("--", style = MaterialTheme.typography.titleSmall)
+                    Text(summary.savings, style = MaterialTheme.typography.titleSmall)
                 }
                 Column(
                     horizontalAlignment = Alignment.End,
                     modifier = Modifier.clip(MaterialTheme.shapes.small).clickable { onBudgetClick() }
                 ) {
                     Text(
-                        "Budget",
+                        stringResource(R.string.budget),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                     )
                     Text(
-                        text = if (summary.budgetPercent != null) "${summary.budgetPercent}%" else "Set",
+                        text = if (summary.budgetPercent != null) "${summary.budgetPercent}%" else stringResource(R.string.set),
                         style = MaterialTheme.typography.titleSmall,
                         color = if (summary.budgetStatus == HomeBudgetStatus.OVER_BUDGET) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -232,16 +330,53 @@ fun HeroCard(
     }
 }
 
+@Composable
+fun PlannedVsActualCard(model: HomePlannedVsActualUiModel) {
+    SoftCard(modifier = Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.planned_commitments), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(4.dp))
+                Row {
+                    Text("${stringResource(R.string.planned)}: ${model.plannedAmountText}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text("${stringResource(R.string.posted)}: ${model.actualAmountText}", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = if (model.isOverPlanned) "+ ${model.deltaText}" else "- ${model.deltaText}",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Black,
+                    color = if (model.isOverPlanned) MaterialTheme.colorScheme.error else Color(0xFF43A047)
+                )
+                Text(
+                    text = if (model.isOverPlanned) stringResource(R.string.above_plan) else stringResource(R.string.under_plan),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        LinearProgressIndicator(
+            progress = { model.progress },
+            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+            color = if (model.progress > 1f) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+        )
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun QuickActionsRow(onAddExpense: () -> Unit, onRecurring: () -> Unit) {
+fun QuickActionsRow(onAddExpense: () -> Unit, onAddSalary: () -> Unit, onRecurring: () -> Unit) {
     val configuration = LocalConfiguration.current
     val screenWidthDp = configuration.screenWidthDp
 
     val maxItems = when {
         screenWidthDp < 360 -> 1
         screenWidthDp < 600 -> 2
-        else -> 3
+        else -> 4
     }
 
     FlowRow(
@@ -250,29 +385,27 @@ fun QuickActionsRow(onAddExpense: () -> Unit, onRecurring: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
         maxItemsInEachRow = maxItems
     ) {
-        val itemModifier = Modifier.weight(1f) // Makes each item fill available width within its column
+        val itemModifier = Modifier.weight(1f)
 
         ActionChip(
             icon = Icons.Default.Add,
-            label = "Expense",
+            label = stringResource(R.string.action_expense),
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
             onClick = onAddExpense,
             modifier = itemModifier
         )
         ActionChip(
-            icon = Icons.Default.KeyboardArrowDown,
-            label = "Income",
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            badge = "Soon",
-            enabled = false,
-            onClick = {},
+            icon = Icons.Default.AccountBalance,
+            label = stringResource(R.string.action_salary),
+            containerColor = Color(0xFFE8F5E9),
+            contentColor = Color(0xFF2E7D32),
+            onClick = onAddSalary,
             modifier = itemModifier
         )
         ActionChip(
             icon = Icons.AutoMirrored.Filled.ArrowForward,
-            label = "Transfer",
+            label = stringResource(R.string.action_transfer),
             containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
             enabled = false,
@@ -281,7 +414,7 @@ fun QuickActionsRow(onAddExpense: () -> Unit, onRecurring: () -> Unit) {
         )
         ActionChip(
             icon = Icons.Default.Refresh,
-            label = "Recurring",
+            label = stringResource(R.string.action_recurring),
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
             contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             onClick = onRecurring,
@@ -310,12 +443,12 @@ fun ActionChip(
         modifier = modifier.fillMaxWidth().heightIn(min = 52.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp),
+            modifier = Modifier.padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+            Text(label, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, maxLines = 1)
             if (badge != null) {
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(

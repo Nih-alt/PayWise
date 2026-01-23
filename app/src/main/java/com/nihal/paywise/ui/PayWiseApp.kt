@@ -1,19 +1,20 @@
 package com.nihal.paywise.ui
 
 import android.util.Log
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.nihal.paywise.navigation.NotificationNavRequest
 import com.nihal.paywise.navigation.PayWiseNavHost
-import com.nihal.paywise.ui.theme.PayWiseTheme
-
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.padding
 import com.nihal.paywise.ui.components.AppBackground
 import com.nihal.paywise.ui.components.PayWiseScaffold
+import com.nihal.paywise.ui.theme.PayWiseTheme
 
 @Composable
 fun PayWiseApp(
@@ -26,6 +27,7 @@ fun PayWiseApp(
     PayWiseTheme {
         val navController = rememberNavController()
         val snackbarHostState = remember { SnackbarHostState() }
+        val fabVisible = remember { mutableStateOf(true) }
         
         LaunchedEffect(navRequest) {
             navRequest?.let { request ->
@@ -48,7 +50,8 @@ fun PayWiseApp(
         AppBackground {
             PayWiseScaffold(
                 navController = navController,
-                snackbarHostState = snackbarHostState
+                snackbarHostState = snackbarHostState,
+                showFab = fabVisible.value
             ) { innerPadding ->
                 PayWiseNavHost(
                     navController = navController,
@@ -57,6 +60,7 @@ fun PayWiseApp(
                     onboardingCompleted = onboardingCompleted,
                     isLocked = isLocked,
                     onUnlock = onUnlock,
+                    onFabVisibilityChange = { fabVisible.value = it },
                     modifier = Modifier.padding(innerPadding)
                 )
             }

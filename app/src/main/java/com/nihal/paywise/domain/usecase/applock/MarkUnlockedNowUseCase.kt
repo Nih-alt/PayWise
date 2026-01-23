@@ -6,6 +6,6 @@ class MarkUnlockedNowUseCase(
     private val appLockRepository: AppLockRepository
 ) {
     suspend operator fun invoke() {
-        appLockRepository.markUnlockedNow()
+        appLockRepository.markUnlocked()
     }
 }

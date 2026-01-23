@@ -1,22 +1,26 @@
 package com.nihal.paywise.domain.model
 
-data class CategoryReportItem(
+import java.time.YearMonth
+
+data class CategoryBreakdownRow(
     val categoryId: String,
     val categoryName: String,
-    val amountPaise: Long,
-    val percentage: Float
+    val categoryColor: Long,
+    val totalAmount: Long,
+    val percentage: Float = 0f
 )
 
-data class TrendItem(
-    val label: String, // e.g., "Jan"
-    val amountPaise: Long
+data class SpendingGroupRow(
+    val spendingGroup: SpendingGroup,
+    val totalAmount: Long,
+    val percentage: Float = 0f
 )
 
-data class FixedVsDiscretionaryReport(
-    val fixedTotal: Long,
-    val discretionaryTotal: Long
-) {
-    val total: Long get() = fixedTotal + discretionaryTotal
-    val fixedPercent: Float get() = if (total > 0) fixedTotal.toFloat() / total.toFloat() else 0f
-    val discretionaryPercent: Float get() = if (total > 0) discretionaryTotal.toFloat() / total.toFloat() else 0f
+data class MonthlyTrendRow(
+    val yearMonth: YearMonth,
+    val totalAmount: Long
+)
+
+enum class ReportRangePreset {
+    THIS_MONTH, LAST_30_DAYS, YEAR_TO_DATE, LAST_12_MONTHS, CUSTOM
 }

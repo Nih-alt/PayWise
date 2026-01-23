@@ -3,6 +3,7 @@ package com.nihal.paywise.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.nihal.paywise.domain.model.CategoryKind
+import com.nihal.paywise.domain.model.SpendingGroup
 
 @Entity(tableName = "categories")
 data class CategoryEntity(
@@ -11,5 +12,6 @@ data class CategoryEntity(
     val name: String,
     val color: Long,
     val kind: CategoryKind,
+    val spendingGroup: SpendingGroup,
     val parentId: String?
 )

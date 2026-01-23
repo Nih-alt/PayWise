@@ -21,30 +21,8 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -55,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.di.AppViewModelProvider
+import com.nihal.paywise.domain.model.TransactionType
 import com.nihal.paywise.ui.components.AppBackground
 import com.nihal.paywise.ui.components.BigAmountInput
 import com.nihal.paywise.ui.components.SelectorRow
@@ -67,6 +46,7 @@ import java.time.Instant
 @Composable
 fun AddTransactionScreen(
     navigateBack: () -> Unit,
+    prefillSalaryLabel: String? = null,
     modifier: Modifier = Modifier,
     viewModel: AddTransactionViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -75,6 +55,12 @@ fun AddTransactionScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     
+    LaunchedEffect(prefillSalaryLabel) {
+        if (prefillSalaryLabel != null) {
+            viewModel.setSalaryPrefill(prefillSalaryLabel)
+        }
+    }
+
     // Bottom Sheet States
     var showAccountSheet by remember { mutableStateOf(false) }
     var showCategorySheet by remember { mutableStateOf(false) }
@@ -119,7 +105,11 @@ fun AddTransactionScreen(
                     )
                 }
                 Text(
-                    text = "New Expense",
+                    text = when(viewModel.transactionType) {
+                        TransactionType.EXPENSE -> "New Expense"
+                        TransactionType.INCOME -> if (prefillSalaryLabel != null) "Add Salary" else "New Income"
+                        TransactionType.TRANSFER -> "New Transfer"
+                    },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -209,7 +199,7 @@ fun AddTransactionScreen(
                                 shape = RoundedCornerShape(16.dp)
                             ) {
                                 Text(
-                                    text = "Save Expense",
+                                    text = "Save Transaction",
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )

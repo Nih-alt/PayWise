@@ -4,6 +4,7 @@ import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import java.time.YearMonth
 import java.time.ZoneId
 
@@ -18,8 +19,11 @@ class GetMonthlyExpenseTotalsUseCase(
     operator fun invoke(yearMonth: YearMonth): Flow<MonthlyExpenseTotals> {
         val startInstant = yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
         val endInstant = yearMonth.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant()
+        return invoke(startInstant, endInstant)
+    }
 
-        return transactionRepository.getTransactionsBetweenStream(startInstant, endInstant).map { transactions ->
+    operator fun invoke(start: Instant, end: Instant): Flow<MonthlyExpenseTotals> {
+        return transactionRepository.getTransactionsBetweenStream(start, end).map { transactions ->
             val expenses = transactions.filter { it.type == TransactionType.EXPENSE }
             
             // Identifying parent transactions of splits to avoid double counting

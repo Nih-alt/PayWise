@@ -184,7 +184,8 @@ fun EmptyState(
     subtitle: String,
     modifier: Modifier = Modifier,
     hint: String? = null,
-    contentDescription: String? = null
+    contentDescription: String? = null,
+    primaryAction: (@Composable () -> Unit)? = null
 ) {
     Box(
         modifier = modifier
@@ -198,7 +199,7 @@ fun EmptyState(
             contentDescription = null,
             modifier = Modifier
                 .size(220.dp)
-                .alpha(0.06f),
+                .alpha(0.03f),
             tint = Color.Unspecified
         )
 
@@ -252,6 +253,11 @@ fun EmptyState(
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center
                 )
+            }
+
+            if (primaryAction != null) {
+                Spacer(modifier = Modifier.height(24.dp))
+                primaryAction()
             }
         }
     }

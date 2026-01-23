@@ -42,6 +42,7 @@ data class CategoryBackup(
     val name: String,
     val color: Long,
     val kind: String,
+    val spendingGroup: String = "DISCRETIONARY",
     val parentId: String?
 )
 
