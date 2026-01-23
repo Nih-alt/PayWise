@@ -6,8 +6,14 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nihal.paywise.ExpenseTrackerApp
+import com.nihal.paywise.ui.accounts.CardBillDetailViewModel
+import com.nihal.paywise.ui.accounts.CardDetailsViewModel
 import com.nihal.paywise.ui.addtxn.TransactionEditorViewModel
 import com.nihal.paywise.ui.budgets.BudgetsViewModel
+import com.nihal.paywise.ui.claims.ClaimDetailsViewModel
+import com.nihal.paywise.ui.claims.ClaimsViewModel
+import com.nihal.paywise.ui.goals.GoalDetailsViewModel
+import com.nihal.paywise.ui.goals.GoalsViewModel
 import com.nihal.paywise.ui.home.HomeViewModel
 import com.nihal.paywise.ui.lock.LockViewModel
 import com.nihal.paywise.ui.onboarding.OnboardingViewModel
@@ -69,7 +75,10 @@ object AppViewModelProvider {
                 inventoryApplication().container.recurringRepository,
                 inventoryApplication().container.userPreferencesRepository,
                 inventoryApplication().container.runRecurringAutoPostUseCase,
-                inventoryApplication().container.getBudgetStatusUseCase
+                inventoryApplication().container.getBudgetStatusUseCase,
+                inventoryApplication().container.getCardStatementUseCase,
+                inventoryApplication().container.getCardBillUseCase,
+                inventoryApplication().container.claimRepository
             )
         }
         initializer {
@@ -85,7 +94,52 @@ object AppViewModelProvider {
                 this.createSavedStateHandle(),
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
-                inventoryApplication().container.categoryRepository
+                inventoryApplication().container.categoryRepository,
+                inventoryApplication().container.attachmentRepository
+            )
+        }
+        initializer {
+            CardBillDetailViewModel(
+                this.createSavedStateHandle(),
+                inventoryApplication().container.accountRepository,
+                inventoryApplication().container.transactionRepository,
+                inventoryApplication().container.getCardBillUseCase
+            )
+        }
+        initializer {
+            CardDetailsViewModel(
+                this.createSavedStateHandle(),
+                inventoryApplication().container.accountRepository,
+                inventoryApplication().container.transactionRepository,
+                inventoryApplication().container.getCardStatementUseCase
+            )
+        }
+        initializer {
+            GoalsViewModel(
+                inventoryApplication().container.savingsGoalRepository
+            )
+        }
+        initializer {
+            GoalDetailsViewModel(
+                this.createSavedStateHandle(),
+                inventoryApplication().container.savingsGoalRepository,
+                inventoryApplication().container.transactionRepository,
+                inventoryApplication().container.accountRepository,
+                inventoryApplication().container.addGoalAllocationUseCase
+            )
+        }
+        initializer {
+            ClaimsViewModel(
+                inventoryApplication().container.claimRepository
+            )
+        }
+        initializer {
+            ClaimDetailsViewModel(
+                this.createSavedStateHandle(),
+                inventoryApplication().container.claimRepository,
+                (inventoryApplication().container.claimRepository as com.nihal.paywise.data.repository.OfflineClaimRepository).claimDao,
+                inventoryApplication().container.transactionRepository,
+                inventoryApplication().container.accountRepository
             )
         }
         initializer {

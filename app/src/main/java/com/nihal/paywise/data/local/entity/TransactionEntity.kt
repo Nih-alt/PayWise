@@ -16,6 +16,8 @@ data class TransactionEntity(
     val counterAccountId: String?, // Only for transfer
     val categoryId: String?, // Nullable for transfer
     val note: String?,
-    val recurringId: String?,
-    val splitOfTransactionId: String?
-)
+        val recurringId: String?,
+        val splitOfTransactionId: String?,
+        val goalId: String? = null
+    )
+    

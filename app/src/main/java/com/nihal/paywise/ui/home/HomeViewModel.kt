@@ -3,13 +3,17 @@ package com.nihal.paywise.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nihal.paywise.data.local.UserPreferencesRepository
+import com.nihal.paywise.data.local.entity.ClaimStatus
 import com.nihal.paywise.data.repository.AccountRepository
 import com.nihal.paywise.data.repository.CategoryRepository
+import com.nihal.paywise.data.repository.ClaimRepository
 import com.nihal.paywise.data.repository.RecurringRepository
 import com.nihal.paywise.data.repository.TransactionRepository
-import com.nihal.paywise.domain.model.SalarySettings
-import com.nihal.paywise.domain.model.TransactionType
+import com.nihal.paywise.domain.model.*
 import com.nihal.paywise.domain.usecase.GetBudgetStatusUseCase
+import com.nihal.paywise.domain.usecase.GetCardStatementUseCase
+import com.nihal.paywise.domain.usecase.GetCardBillUseCase
+import com.nihal.paywise.domain.usecase.CardBillUiModel
 import com.nihal.paywise.domain.usecase.RunRecurringAutoPostUseCase
 import com.nihal.paywise.util.*
 import kotlinx.coroutines.Dispatchers
@@ -67,7 +71,10 @@ class HomeViewModel(
     private val recurringRepository: RecurringRepository,
     private val userPreferencesRepository: UserPreferencesRepository,
     private val runRecurringAutoPostUseCase: RunRecurringAutoPostUseCase,
-    private val getBudgetStatusUseCase: GetBudgetStatusUseCase
+    private val getBudgetStatusUseCase: GetBudgetStatusUseCase,
+    private val getCardStatementUseCase: GetCardStatementUseCase,
+    private val getCardBillUseCase: GetCardBillUseCase,
+    private val claimRepository: ClaimRepository
 ) : ViewModel() {
 
     init {
@@ -123,9 +130,6 @@ class HomeViewModel(
             transactionRepository.getTransactionsBetweenStream(cycle.start, cycle.end)
         ) { recurringList, transactions ->
             val activeRecurring = recurringList.filter { it.status == com.nihal.paywise.domain.model.RecurringStatus.ACTIVE }
-            // Sum amount for recurring items that have their dueDay within the cycle range
-            // For simplicity, we assume recurring are monthly. 
-            // In a real scenario, we'd check if they occur in the current cycle's date range.
             val plannedTotal = activeRecurring.sumOf { it.amountPaise }
             val actualSpentOnRecurring = transactions
                 .filter { it.type == TransactionType.EXPENSE && it.recurringId != null }
@@ -205,4 +209,34 @@ class HomeViewModel(
             salarySettings.value.isEnabled && !hasSalary
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    val cardDueAlerts: StateFlow<List<CardStatement>> = accountRepository.getAllAccountsStream()
+        .flatMapLatest { accounts ->
+            val cards = accounts.filter { it.type == AccountType.CARD }
+            if (cards.isEmpty()) return@flatMapLatest flowOf(emptyList<CardStatement>())
+            
+            val cardFlows = cards.map { getCardStatementUseCase(it, YearMonth.now()) }
+            combine(cardFlows) { statements ->
+                statements.filterNotNull().filter { it.status == CardPaymentStatus.DUE_SOON || it.status == CardPaymentStatus.OVERDUE }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val cardBillAlerts: StateFlow<List<Pair<Account, CardBillUiModel>>> = accountRepository.getAllAccountsStream()
+        .flatMapLatest { accounts ->
+            val cards = accounts.filter { it.type == AccountType.CARD }
+            if (cards.isEmpty()) return@flatMapLatest flowOf(emptyList<Pair<Account, CardBillUiModel>>())
+            
+            val billFlows = cards.map { card ->
+                getCardBillUseCase(card).map { bill -> if (bill != null) card to bill else null }
+            }
+            combine(billFlows) { pairs ->
+                pairs.filterNotNull().filter { it.second.remainingToPayPaise > 0 }
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val pendingClaimsTotalPaise: StateFlow<Long> = claimRepository.observeAllClaims()
+        .map { claims ->
+            claims.filter { it.status == ClaimStatus.SUBMITTED || it.status == ClaimStatus.APPROVED }
+                .sumOf { 0L } // Placeholder for actual summing logic
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0L)
 }

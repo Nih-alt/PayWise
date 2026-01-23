@@ -1,22 +1,23 @@
 package com.nihal.paywise.ui.addtxn
 
 import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.*
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.nihal.paywise.data.local.entity.AttachmentEntity
 import com.nihal.paywise.data.repository.AccountRepository
+import com.nihal.paywise.data.repository.AttachmentRepository
 import com.nihal.paywise.data.repository.CategoryRepository
 import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.model.*
 import com.nihal.paywise.util.BudgetCheckWorker
+import com.nihal.paywise.util.FileHelper
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 
@@ -30,7 +31,8 @@ data class TransactionEditorUiState(
     val transactionType: TransactionType = TransactionType.EXPENSE,
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val attachments: List<AttachmentEntity> = emptyList()
 )
 
 class TransactionEditorViewModel(
@@ -38,10 +40,11 @@ class TransactionEditorViewModel(
     private val savedStateHandle: SavedStateHandle,
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val attachmentRepository: AttachmentRepository
 ) : ViewModel() {
 
-    private val transactionId: String? = savedStateHandle["transactionId"]
+    private var currentTxnId: String = savedStateHandle["transactionId"] ?: UUID.randomUUID().toString()
     private val initialType: String? = savedStateHandle["type"]
 
     var uiState by mutableStateOf(TransactionEditorUiState())
@@ -59,11 +62,13 @@ class TransactionEditorViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        if (transactionId != null) {
-            loadTransaction(transactionId)
+        if (savedStateHandle.contains("transactionId")) {
+            loadTransaction(currentTxnId)
         } else if (initialType != null) {
             uiState = uiState.copy(transactionType = TransactionType.valueOf(initialType))
         }
+        
+        observeAttachments(currentTxnId)
     }
 
     private fun loadTransaction(id: String) {
@@ -83,6 +88,46 @@ class TransactionEditorViewModel(
                     isLoading = false
                 )
             }
+        }
+    }
+
+    private fun observeAttachments(txnId: String) {
+        viewModelScope.launch {
+            attachmentRepository.observeAttachmentsForTxn(txnId).collect {
+                uiState = uiState.copy(attachments = it)
+            }
+        }
+    }
+
+    fun addAttachment(uri: android.net.Uri) {
+        val id = UUID.randomUUID().toString()
+        val context = application.applicationContext
+        val mimeType = context.contentResolver.getType(uri) ?: "image/*"
+        val extension = if (mimeType == "application/pdf") "pdf" else "jpg"
+        val relativePath = "attachments/$currentTxnId/$id.$extension"
+        val targetFile = File(context.filesDir, relativePath)
+        
+        val bytes = FileHelper.copyUriToInternal(context, uri, targetFile)
+        if (bytes > 0) {
+            val attachment = AttachmentEntity(
+                id = id,
+                txnId = currentTxnId,
+                storedRelativePath = relativePath,
+                originalFileName = null,
+                mimeType = mimeType,
+                byteSize = bytes
+            )
+            viewModelScope.launch {
+                attachmentRepository.insertAttachment(attachment)
+            }
+        }
+    }
+
+    fun removeAttachment(attachment: AttachmentEntity) {
+        viewModelScope.launch {
+            attachmentRepository.deleteAttachment(attachment)
+            val file = File(application.filesDir, attachment.storedRelativePath)
+            FileHelper.deleteFile(file)
         }
     }
 
@@ -108,7 +153,7 @@ class TransactionEditorViewModel(
         viewModelScope.launch {
             val amountPaise = convertRupeesToPaise(uiState.amountInput)
             val transaction = Transaction(
-                id = transactionId ?: UUID.randomUUID().toString(),
+                id = currentTxnId,
                 amountPaise = amountPaise,
                 timestamp = uiState.date,
                 type = uiState.transactionType,
@@ -128,13 +173,14 @@ class TransactionEditorViewModel(
     }
 
     fun deleteTransaction(onSuccess: () -> Unit) {
-        transactionId?.let { id ->
-            viewModelScope.launch {
-                val txn = transactionRepository.getTransactionById(id)
-                if (txn != null) {
-                    transactionRepository.deleteTransaction(txn)
-                    onSuccess()
-                }
+        viewModelScope.launch {
+            val txn = transactionRepository.getTransactionById(currentTxnId)
+            if (txn != null) {
+                transactionRepository.deleteTransaction(txn)
+                // Attachments are deleted by CASCADE in DB, but we should clean up files too
+                val folder = File(application.filesDir, "attachments/$currentTxnId")
+                folder.deleteRecursively()
+                onSuccess()
             }
         }
     }

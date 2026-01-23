@@ -20,6 +20,9 @@ interface AppContainer {
     val recurringSnoozeRepository: RecurringSnoozeRepository
     val budgetRepository: BudgetRepository
     val backupRepository: BackupRepository
+    val savingsGoalRepository: SavingsGoalRepository
+    val attachmentRepository: AttachmentRepository
+    val claimRepository: ClaimRepository
     val userPreferencesRepository: UserPreferencesRepository
     val appLockRepository: AppLockRepository
     val recurringReminderScheduler: RecurringReminderScheduler
@@ -37,6 +40,9 @@ interface AppContainer {
     val getCategoryBreakdownUseCase: GetCategoryBreakdownUseCase
     val getMonthlyTrendUseCase: GetMonthlyTrendUseCase
     val getFixedVsDiscretionaryUseCase: GetFixedVsDiscretionaryUseCase
+    val getCardStatementUseCase: GetCardStatementUseCase
+    val getCardBillUseCase: GetCardBillUseCase
+    val addGoalAllocationUseCase: AddGoalAllocationUseCase
 
     // App Lock Use Cases
     val getAppLockSettingsUseCase: GetAppLockSettingsUseCase
@@ -95,7 +101,19 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val backupRepository: BackupRepository by lazy {
-        OfflineBackupRepository(database.backupDao())
+        OfflineBackupRepository(context, database.backupDao())
+    }
+
+    override val savingsGoalRepository: SavingsGoalRepository by lazy {
+        OfflineSavingsGoalRepository(database.savingsGoalDao())
+    }
+
+    override val attachmentRepository: AttachmentRepository by lazy {
+        OfflineAttachmentRepository(database.attachmentDao())
+    }
+
+    override val claimRepository: ClaimRepository by lazy {
+        OfflineClaimRepository(database.claimDao())
     }
 
     override val recurringReminderScheduler: RecurringReminderScheduler by lazy {
@@ -148,6 +166,18 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val getFixedVsDiscretionaryUseCase: GetFixedVsDiscretionaryUseCase by lazy {
         GetFixedVsDiscretionaryUseCase(transactionRepository)
+    }
+
+    override val getCardStatementUseCase: GetCardStatementUseCase by lazy {
+        GetCardStatementUseCase(transactionRepository)
+    }
+
+    override val getCardBillUseCase: GetCardBillUseCase by lazy {
+        GetCardBillUseCase(transactionRepository)
+    }
+
+    override val addGoalAllocationUseCase: AddGoalAllocationUseCase by lazy {
+        AddGoalAllocationUseCase(transactionRepository)
     }
 
     override val getAppLockSettingsUseCase: GetAppLockSettingsUseCase by lazy {

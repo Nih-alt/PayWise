@@ -19,6 +19,8 @@ import com.nihal.paywise.ui.recurring.AddRecurringScreen
 import com.nihal.paywise.ui.recurring.RecurringHistoryScreen
 import com.nihal.paywise.ui.recurring.RecurringListScreen
 import com.nihal.paywise.ui.transactions.TransactionsListScreen
+import com.nihal.paywise.ui.goals.GoalsScreen
+import com.nihal.paywise.ui.goals.GoalDetailsScreen
 import com.nihal.paywise.ExpenseTrackerApp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.SnackbarHostState
@@ -87,17 +89,31 @@ fun PayWiseNavHost(
         navigation(startDestination = "home", route = "main") {
             composable("home") {
                 HomeScreen(
-                    onAddClick = { type -> navController.navigate("transaction_add?type=$type") },
+                    onAddClick = { type -> 
+                        when {
+                            type.startsWith("CARD_DETAILS_") -> {
+                                val id = type.removePrefix("CARD_DETAILS_")
+                                navController.navigate("card_details/$id")
+                            }
+                            type.startsWith("CARD_BILL_") -> {
+                                val id = type.removePrefix("CARD_BILL_")
+                                navController.navigate("card_bill_detail/$id")
+                            }
+                            else -> navController.navigate("transaction_add?type=$type")
+                        }
+                    },
                     onAddSalaryClick = { label -> navController.navigate("transaction_add?type=INCOME&cycleLabel=$label") },
                     onRecurringClick = { navController.navigate("recurring_list") },
                     onBudgetClick = { navController.navigate("budgets") },
+                    onGoalsClick = { navController.navigate("goals") },
+                    onClaimsClick = { navController.navigate("claims_list") },
                     onFabVisibilityChange = onFabVisibilityChange
                 )
             }
             composable("transactions") {
                 TransactionsListScreen(
                     onTransactionClick = { id -> navController.navigate("transaction_edit/$id") },
-                    onAddClick = { navController.navigate("transaction_add?type=EXPENSE") }
+                    onAddClick = { type -> navController.navigate("transaction_add?type=$type") }
                 )
             }
             composable("budgets") {
@@ -105,6 +121,24 @@ fun PayWiseNavHost(
             }
             composable("reports") {
                 ReportsScreen()
+            }
+            composable("goals") {
+                GoalsScreen(onGoalClick = { id -> navController.navigate("goal_details/$id") })
+            }
+            composable("claims_list") {
+                com.nihal.paywise.ui.claims.ClaimsListScreen(onClaimClick = { id -> navController.navigate("claim_details/$id") })
+            }
+            composable(
+                route = "claim_details/{claimId}",
+                arguments = listOf(navArgument("claimId") { type = NavType.StringType })
+            ) {
+                com.nihal.paywise.ui.claims.ClaimDetailsScreen(onBack = { navController.popBackStack() })
+            }
+            composable(
+                route = "goal_details/{goalId}",
+                arguments = listOf(navArgument("goalId") { type = NavType.StringType })
+            ) {
+                GoalDetailsScreen(onBack = { navController.popBackStack() })
             }
             composable("settings") {
                 SettingsScreen(
@@ -123,6 +157,26 @@ fun PayWiseNavHost(
                     snackbarHostState = snackbarHostState,
                     onAddRecurringClick = { navController.navigate("add_recurring") },
                     onHistoryClick = { id -> navController.navigate("recurring_history/$id") }
+                )
+            }
+            composable(
+                route = "card_bill_detail/{accountId}",
+                arguments = listOf(navArgument("accountId") { type = NavType.StringType })
+            ) {
+                com.nihal.paywise.ui.accounts.CardBillDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onPayClick = { id, amount -> 
+                        navController.navigate("transaction_add?type=TRANSFER") 
+                    }
+                )
+            }
+            composable(
+                route = "card_details/{accountId}",
+                arguments = listOf(navArgument("accountId") { type = NavType.StringType })
+            ) {
+                com.nihal.paywise.ui.accounts.CardDetailsScreen(
+                    onBack = { navController.popBackStack() },
+                    onPayClick = { id -> navController.navigate("transaction_add?type=TRANSFER") }
                 )
             }
         }

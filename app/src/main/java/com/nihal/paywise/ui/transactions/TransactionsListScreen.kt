@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,6 +36,21 @@ fun TransactionsListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    
+    val filteredAccount = accounts.find { it.id == uiState.selectedAccountId }
+    var cardStatement by remember { mutableStateOf<CardStatement?>(null) }
+    
+    // Fetch statement if a card is selected
+    val getCardStatementUseCase = (LocalContext.current.applicationContext as com.nihal.paywise.ExpenseTrackerApp).container.getCardStatementUseCase
+    LaunchedEffect(uiState.selectedAccountId) {
+        if (filteredAccount?.type == AccountType.CARD) {
+            getCardStatementUseCase(filteredAccount, java.time.YearMonth.now()).collect {
+                cardStatement = it
+            }
+        } else {
+            cardStatement = null
+        }
+    }
     
     var showFilters by remember { mutableStateOf(false) }
     var showAddSheet by remember { mutableStateOf(false) }
@@ -92,6 +108,12 @@ fun TransactionsListScreen(
                         contentPadding = PaddingValues(bottom = 100.dp, start = 16.dp, end = 16.dp, top = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        cardStatement?.let {
+                            item {
+                                com.nihal.paywise.ui.accounts.CardSummaryGlass(it, onPayClick = { onAddClick("TRANSFER") })
+                            }
+                        }
+
                         uiState.groupedTransactions.forEach { (date, items) ->
                             item {
                                 DateHeader(date)

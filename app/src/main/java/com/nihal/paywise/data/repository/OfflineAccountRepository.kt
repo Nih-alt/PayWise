@@ -11,6 +11,9 @@ class OfflineAccountRepository(private val accountDao: AccountDao) : AccountRepo
     override fun getAllAccountsStream(): Flow<List<Account>> = 
         accountDao.observeAllAccounts().map { list -> list.map { it.toDomain() } }
 
+    override fun getAccountStream(id: String): Flow<Account?> =
+        accountDao.observeAccount(id).map { it?.toDomain() }
+
     override suspend fun getAccountCount(): Int = accountDao.getCount()
 
     override suspend fun insertAccount(account: Account) = 

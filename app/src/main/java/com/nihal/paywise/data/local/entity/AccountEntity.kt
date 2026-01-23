@@ -7,8 +7,11 @@ import com.nihal.paywise.domain.model.AccountType
 @Entity(tableName = "accounts")
 data class AccountEntity(
     @PrimaryKey
-    val id: String, // UUID
+    val id: String,
     val name: String,
     val type: AccountType,
-    val openingBalancePaise: Long
+    val openingBalancePaise: Long,
+    val statementDay: Int? = null,
+    val dueDay: Int? = null,
+    val creditLimitPaise: Long? = null
 )

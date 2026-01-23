@@ -27,9 +27,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nihal.paywise.R
 import com.nihal.paywise.di.AppViewModelProvider
-import com.nihal.paywise.domain.model.TransactionType
+import com.nihal.paywise.domain.model.*
 import com.nihal.paywise.ui.components.*
+import com.nihal.paywise.ui.goals.GoalsViewModel
 import com.nihal.paywise.ui.util.CategoryVisuals
+import com.nihal.paywise.util.MoneyFormatter
 
 @Composable
 fun HomeScreen(
@@ -37,6 +39,8 @@ fun HomeScreen(
     onAddSalaryClick: (String) -> Unit,
     onRecurringClick: () -> Unit,
     onBudgetClick: () -> Unit,
+    onGoalsClick: () -> Unit,
+    onClaimsClick: () -> Unit,
     onFabVisibilityChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = AppViewModelProvider.Factory)
@@ -46,11 +50,16 @@ fun HomeScreen(
     val categories by viewModel.categorySummary.collectAsState()
     val plannedVsActual by viewModel.plannedVsActual.collectAsState()
     val showSalaryPrompt by viewModel.showSalaryPrompt.collectAsState()
+    val cardAlerts by viewModel.cardDueAlerts.collectAsState()
+    val cardBillAlerts by viewModel.cardBillAlerts.collectAsState()
+    val pendingClaimsTotal by viewModel.pendingClaimsTotalPaise.collectAsState()
+    
+    val goalsViewModel: GoalsViewModel = viewModel(factory = AppViewModelProvider.Factory)
+    val goals by goalsViewModel.activeGoals.collectAsState()
     
     var showAddSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(transactions) {
-        // Always hide the global FAB on Home, as we use an anchored button
         onFabVisibilityChange(false)
     }
 
@@ -69,7 +78,7 @@ fun HomeScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
-            contentPadding = PaddingValues(bottom = 100.dp) // Space for anchored button
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             // 1. Hero Card
             item {
@@ -115,7 +124,7 @@ fun HomeScreen(
             item {
                 SectionHeader(title = stringResource(R.string.quick_actions))
                 QuickActionsRow(
-                    onAddExpense = { onAddClick("EXPENSE") },
+                    onAddExpense = { showAddSheet = true },
                     onAddSalary = { onAddSalaryClick(summary.cycleLabel) },
                     onRecurring = onRecurringClick
                 )
@@ -126,6 +135,64 @@ fun HomeScreen(
                 item {
                     SectionHeader(title = stringResource(R.string.planned_commitments))
                     PlannedVsActualCard(plannedVsActual!!)
+                }
+            }
+
+            // Credit Card Dues
+            if (cardAlerts.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Credit Card Dues")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        cardAlerts.forEach { alert ->
+                            CardDueAlertItem(alert, onCardClick = { onAddClick("CARD_DETAILS_${alert.accountId}") })
+                        }
+                    }
+                }
+            }
+
+            if (cardBillAlerts.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Outstanding Bills")
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        cardBillAlerts.forEach { (account, bill) ->
+                            CardBillAlertItem(account, bill, onCardClick = { onAddClick("CARD_BILL_${account.id}") })
+                        }
+                    }
+                }
+            }
+
+            // Reimbursements
+            if (pendingClaimsTotal > 0) {
+                item {
+                    SectionHeader(title = "Reimbursements", actionText = "View All", onActionClick = onClaimsClick)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().clickable { onClaimsClick() },
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f))
+                    ) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Assignment, null, tint = MaterialTheme.colorScheme.secondary)
+                            Spacer(Modifier.width(16.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Pending Claims", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text("Total expected: ${MoneyFormatter.formatPaise(pendingClaimsTotal)}", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+
+            // Savings Progress
+            if (goals.isNotEmpty()) {
+                item {
+                    SectionHeader(
+                        title = "Savings Goals",
+                        actionText = "View All",
+                        onActionClick = onGoalsClick
+                    )
+                    com.nihal.paywise.ui.goals.GoalCard(goals.first(), onClick = onGoalsClick)
                 }
             }
 
@@ -486,6 +553,57 @@ fun CategorySummaryRow(categories: List<CategorySummaryUiModel>) {
                     trackColor = visual.containerColor
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun CardDueAlertItem(statement: CardStatement, onCardClick: () -> Unit) {
+    val color = if (statement.status == CardPaymentStatus.OVERDUE) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onCardClick() },
+        shape = MaterialTheme.shapes.large,
+        color = color.copy(alpha = 0.1f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.CreditCard, null, tint = color)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(statement.accountName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("Due: ${MoneyFormatter.formatPaise(statement.netDuePaise)} by ${statement.dueDate}", style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                if (statement.status == CardPaymentStatus.OVERDUE) "OVERDUE" else "DUE SOON",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+                color = color
+            )
+        }
+    }
+}
+
+@Composable
+fun CardBillAlertItem(
+    account: Account,
+    bill: com.nihal.paywise.domain.usecase.CardBillUiModel,
+    onCardClick: () -> Unit
+) {
+    val color = MaterialTheme.colorScheme.primary
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { onCardClick() },
+        shape = MaterialTheme.shapes.large,
+        color = color.copy(alpha = 0.1f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.2f))
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.ReceiptLong, null, tint = color)
+            Spacer(Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(account.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text("Upcoming Bill: ${MoneyFormatter.formatPaise(bill.remainingToPayPaise)}", style = MaterialTheme.typography.bodySmall)
+            }
+            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = color.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
         }
     }
 }

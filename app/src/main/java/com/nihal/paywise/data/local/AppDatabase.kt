@@ -18,9 +18,13 @@ import com.nihal.paywise.data.local.entity.*
         RecurringEntity::class,
         RecurringSkipEntity::class,
         RecurringSnoozeEntity::class,
-        BudgetEntity::class
+        BudgetEntity::class,
+        SavingsGoalEntity::class,
+        AttachmentEntity::class,
+        ClaimEntity::class,
+        ClaimItemEntity::class
     ],
-    version = 6,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(PayWiseConverters::class)
@@ -33,6 +37,9 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recurringSnoozeDao(): RecurringSnoozeDao
     abstract fun budgetDao(): BudgetDao
     abstract fun backupDao(): BackupDao
+    abstract fun savingsGoalDao(): SavingsGoalDao
+    abstract fun attachmentDao(): AttachmentDao
+    abstract fun claimDao(): ClaimDao
 
     companion object {
         @Volatile
@@ -119,10 +126,100 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `accounts` ADD COLUMN `statementDay` INTEGER")
+                db.execSQL("ALTER TABLE `accounts` ADD COLUMN `dueDay` INTEGER")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `savings_goals` (
+                        `id` TEXT NOT NULL, 
+                        `title` TEXT NOT NULL, 
+                        `targetAmountPaise` INTEGER NOT NULL, 
+                        `targetDateEpochMillis` INTEGER, 
+                        `color` INTEGER NOT NULL, 
+                        `isArchived` INTEGER NOT NULL DEFAULT 0, 
+                        `createdAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("ALTER TABLE `transactions` ADD COLUMN `goalId` TEXT")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `accounts` ADD COLUMN `creditLimitPaise` INTEGER")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `attachments` (
+                        `id` TEXT NOT NULL, 
+                        `txnId` TEXT, 
+                        `storedRelativePath` TEXT NOT NULL, 
+                        `originalFileName` TEXT, 
+                        `mimeType` TEXT NOT NULL, 
+                        `byteSize` INTEGER NOT NULL, 
+                        `createdAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`id`), 
+                        FOREIGN KEY(`txnId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE 
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_attachments_txnId` ON `attachments` (`txnId`)")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `reimbursement_claims` (
+                        `id` TEXT NOT NULL, 
+                        `title` TEXT NOT NULL, 
+                        `status` TEXT NOT NULL, 
+                        `notes` TEXT, 
+                        `createdAt` INTEGER NOT NULL, 
+                        `submittedAt` INTEGER, 
+                        `approvedAt` INTEGER, 
+                        `reimbursedAt` INTEGER, 
+                        `reimbursedAmountPaise` INTEGER, 
+                        `incomeTxnId` TEXT, 
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `claim_items` (
+                        `claimId` TEXT NOT NULL, 
+                        `txnId` TEXT NOT NULL, 
+                        `includeAmountPaise` INTEGER NOT NULL, 
+                        PRIMARY KEY(`claimId`, `txnId`), 
+                        FOREIGN KEY(`claimId`) REFERENCES `reimbursement_claims`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE, 
+                        FOREIGN KEY(`txnId`) REFERENCES `transactions`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE 
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_claim_items_txnId` ON `claim_items` (`txnId`)")
+                db.execSQL("ALTER TABLE `attachments` ADD COLUMN `claimId` TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "expense_tracker.db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                     .build()
                     .also { Instance = it }
             }

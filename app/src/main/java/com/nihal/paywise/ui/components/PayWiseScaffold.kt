@@ -11,42 +11,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Wallet
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.nihal.paywise.util.DateTimeFormatterUtil
 import java.time.YearMonth
+
+private data class BottomNavItem(
+    val label: String,
+    val route: String,
+    val icon: ImageVector
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +47,7 @@ fun PayWiseScaffold(
     val currentRoute = currentDestination?.route
 
     val isMainScreen = currentRoute == "home" || currentRoute == "transactions" || 
+                       currentRoute == "goals" ||
                        currentRoute == "budgets" || currentRoute == "reports" || 
                        currentRoute == "settings"
     val isOnboardingScreen = currentRoute == "onboarding"
@@ -95,11 +82,11 @@ fun PayWiseScaffold(
                                     shape = MaterialTheme.shapes.extraLarge
                                 )
                             }
-                            Spacer(Modifier.weight(1f)) // Pushes content to the start
+                            Spacer(Modifier.weight(1f))
                         }
                     },
                     actions = {
-                        IconButton(onClick = { /* Navigate to Settings or show logs */ }) {
+                        IconButton(onClick = { navController.navigate("settings") }) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
                                 contentDescription = "Settings",
@@ -124,21 +111,22 @@ fun PayWiseScaffold(
                     tonalElevation = 8.dp
                 ) {
                     val items = listOf(
-                        Triple("home", "Home", Icons.Default.Home),
-                        Triple("transactions", "Activity", Icons.Default.ReceiptLong),
-                        Triple("budgets", "Budgets", Icons.Default.Wallet),
-                        Triple("reports", "Reports", Icons.Default.AccountBalance),
-                        Triple("settings", "Profile", Icons.Default.Settings)
+                        BottomNavItem("Home", "home", Icons.Default.Home),
+                        BottomNavItem("Activity", "transactions", Icons.AutoMirrored.Filled.ReceiptLong),
+                        BottomNavItem("Goals", "goals", Icons.Default.Savings),
+                        BottomNavItem("Budgets", "budgets", Icons.Default.AccountBalanceWallet),
+                        BottomNavItem("Reports", "reports", Icons.Default.BarChart),
+                        BottomNavItem("Settings", "settings", Icons.Default.Settings)
                     )
 
-                    items.forEach { (route, label, icon) ->
-                        val selected = currentDestination?.hierarchy?.any { it.route == route } == true
+                    items.forEach { item ->
+                        val selected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                         NavigationBarItem(
-                            icon = { Icon(icon, contentDescription = label) },
-                            label = { Text(label) },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
                             selected = selected,
                             onClick = {
-                                navController.navigate(route) {
+                                navController.navigate(item.route) {
                                     popUpTo("main") {
                                         saveState = true
                                     }
@@ -158,13 +146,13 @@ fun PayWiseScaffold(
         },
         floatingActionButton = {
             AnimatedVisibility(
-                visible = showFab && isMainScreen && currentRoute != "home" && currentRoute != "budgets" && currentRoute != "settings",
+                visible = showFab && isMainScreen && currentRoute != "home" && currentRoute != "budgets" && currentRoute != "settings" && currentRoute != "goals",
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        if (currentRoute == "home" || currentRoute == "transactions") navController.navigate("transaction_add?type=EXPENSE")
+                        if (currentRoute == "transactions") navController.navigate("transaction_add?type=EXPENSE")
                         else navController.navigate("add_recurring")
                     },
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -172,7 +160,7 @@ fun PayWiseScaffold(
                     shape = MaterialTheme.shapes.large,
                     icon = { Icon(Icons.Default.Add, "Add") },
                     text = {
-                        Text(if (currentRoute == "home") "Add Expense" else "New Rule")
+                        Text(if (currentRoute == "home") "Add Expense" else "New Entry")
                     }
                 )
             }

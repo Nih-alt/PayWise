@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AccountRepository {
     fun getAllAccountsStream(): Flow<List<Account>>
+    fun getAccountStream(id: String): Flow<Account?>
     suspend fun getAccountCount(): Int
     suspend fun insertAccount(account: Account)
     suspend fun updateAccount(account: Account)

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -40,17 +41,24 @@ fun TransactionEditorScreen(
     val uiState = viewModel.uiState
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
+    val context = LocalContext.current
     
-    var showAccountSheet by remember { mutableStateOf(false) }
-    var showCounterAccountSheet by remember { mutableStateOf(false) }
-    var showCategorySheet by remember { mutableStateOf(false) }
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showAccountSheet by mutableStateOf(false)
+    var showCounterAccountSheet by mutableStateOf(false)
+    var showCategorySheet by mutableStateOf(false)
+    var showDatePicker by mutableStateOf(false)
+    var showDeleteConfirm by mutableStateOf(false)
 
     val selectedAccount = accounts.find { it.id == uiState.selectedAccountId }
     val selectedCounterAccount = accounts.find { it.id == uiState.selectedCounterAccountId }
     val selectedCategory = categories.find { it.id == uiState.selectedCategoryId }
     val catVisual = CategoryVisuals.getVisual(selectedCategory?.name ?: "")
+
+    val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.addAttachment(it) }
+    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -117,7 +125,6 @@ fun TransactionEditorScreen(
                 item {
                     GlassCard {
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                            // Account
                             SelectorRow(
                                 label = if (uiState.transactionType == TransactionType.TRANSFER) "From Account" else "Account",
                                 selectedText = selectedAccount?.name ?: "Select Account",
@@ -125,9 +132,8 @@ fun TransactionEditorScreen(
                                 onClick = { showAccountSheet = true }
                             )
                             
-                            // Counter Account (Transfer Only)
                             if (uiState.transactionType == TransactionType.TRANSFER) {
-                                Divider(Modifier.padding(horizontal = 16.dp))
+                                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                                 SelectorRow(
                                     label = "To Account",
                                     selectedText = selectedCounterAccount?.name ?: "Select Account",
@@ -136,9 +142,8 @@ fun TransactionEditorScreen(
                                 )
                             }
 
-                            // Category (Expense/Income Only)
                             if (uiState.transactionType != TransactionType.TRANSFER) {
-                                Divider(Modifier.padding(horizontal = 16.dp))
+                                HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                                 SelectorRow(
                                     label = "Category",
                                     selectedText = selectedCategory?.name ?: "Select Category",
@@ -149,7 +154,7 @@ fun TransactionEditorScreen(
                                 )
                             }
 
-                            Divider(Modifier.padding(horizontal = 16.dp))
+                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
                             SelectorRow(
                                 label = "Date",
                                 selectedText = DateTimeFormatterUtil.formatDate(uiState.date),
@@ -173,6 +178,16 @@ fun TransactionEditorScreen(
                             )
                         )
                     }
+                }
+
+                item {
+                    AttachmentSection(
+                        attachments = uiState.attachments,
+                        filesDir = context.filesDir,
+                        onAddClick = { launcher.launch(arrayOf("image/*", "application/pdf")) },
+                        onRemoveClick = { viewModel.removeAttachment(it) },
+                        onAttachmentClick = { /* Handle preview */ }
+                    )
                 }
 
                 item {

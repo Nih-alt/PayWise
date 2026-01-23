@@ -25,7 +25,11 @@ data class PayWiseBackup(
     val recurring: List<RecurringBackup>,
     val budgets: List<BudgetBackup>,
     val recurringSkips: List<RecurringSkipBackup>,
-    val recurringSnoozes: List<RecurringSnoozeBackup>
+    val recurringSnoozes: List<RecurringSnoozeBackup>,
+    val goals: List<SavingsGoalBackup> = emptyList(),
+    val attachments: List<AttachmentBackup> = emptyList(),
+    val claims: List<ClaimBackup> = emptyList(),
+    val claimItems: List<ClaimItemBackup> = emptyList()
 )
 
 @Serializable
@@ -33,7 +37,10 @@ data class AccountBackup(
     val id: String,
     val name: String,
     val type: String,
-    val openingBalancePaise: Long
+    val openingBalancePaise: Long,
+    val statementDay: Int? = null,
+    val dueDay: Int? = null,
+    val creditLimitPaise: Long? = null
 )
 
 @Serializable
@@ -58,7 +65,8 @@ data class TransactionBackup(
     val categoryId: String?,
     val note: String?,
     val recurringId: String?,
-    val splitOfTransactionId: String?
+    val splitOfTransactionId: String?,
+    val goalId: String? = null
 )
 
 @Serializable
@@ -101,4 +109,53 @@ data class RecurringSnoozeBackup(
     val recurringId: String,
     val yearMonth: String,
     val snoozedUntilEpochMillis: Long
+)
+
+@Serializable
+data class SavingsGoalBackup(
+    val id: String,
+    val title: String,
+    val targetAmountPaise: Long,
+    val targetDateEpochMillis: Long?,
+    val color: Long,
+    val isArchived: Boolean,
+    val createdAt: Long
+)
+
+@Serializable
+data class AttachmentBackup(
+    val id: String,
+    val txnId: String?,
+    val claimId: String? = null,
+    val storedRelativePath: String,
+    val originalFileName: String?,
+    val mimeType: String,
+    val byteSize: Long,
+    @Serializable(with = InstantSerializer::class)
+    val createdAt: Instant
+)
+
+@Serializable
+data class ClaimBackup(
+    val id: String,
+    val title: String,
+    val status: String,
+    val notes: String?,
+    @Serializable(with = InstantSerializer::class)
+    val createdAt: Instant,
+    @Serializable(with = InstantSerializer::class)
+    val submittedAt: Instant?,
+    @Serializable(with = InstantSerializer::class)
+    val approvedAt: Instant?,
+    @Serializable(with = InstantSerializer::class)
+    val reimbursedAt: Instant?,
+    val reimbursedAmountPaise: Long?,
+    val incomeTxnId: String?
+)
+
+@Serializable
+data class ClaimItemBackup(
+    val claimId: String,
+    val txnId: String,
+    val includeAmountPaise: Long
 )
