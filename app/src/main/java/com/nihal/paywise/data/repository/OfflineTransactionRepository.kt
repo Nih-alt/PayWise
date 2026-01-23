@@ -1,16 +1,21 @@
 package com.nihal.paywise.data.repository
 
+import android.content.Context
 import com.nihal.paywise.data.local.dao.TransactionDao
 import com.nihal.paywise.domain.model.CategoryBreakdownRow
 import com.nihal.paywise.domain.model.SpendingGroupRow
 import com.nihal.paywise.domain.model.Transaction
 import com.nihal.paywise.domain.model.toDomain
 import com.nihal.paywise.domain.model.toEntity
+import com.nihal.paywise.util.WidgetUpdateController
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 
-class OfflineTransactionRepository(private val transactionDao: TransactionDao) : TransactionRepository {
+class OfflineTransactionRepository(
+    private val context: Context,
+    private val transactionDao: TransactionDao
+) : TransactionRepository {
     override fun getAllTransactionsStream(): Flow<List<Transaction>> = 
         transactionDao.observeAll().map { list -> list.map { it.toDomain() } }
 
@@ -47,15 +52,23 @@ class OfflineTransactionRepository(private val transactionDao: TransactionDao) :
         return transactionDao.getLatestForRecurring(recurringId)?.toDomain()
     }
         
-    override suspend fun insertTransaction(transaction: Transaction) = 
+    override suspend fun insertTransaction(transaction: Transaction) {
         transactionDao.insert(transaction.toEntity())
+        WidgetUpdateController.updateAllWidgets(context)
+    }
 
-    override suspend fun updateTransaction(transaction: Transaction) =
-        transactionDao.insert(transaction.toEntity()) // Room's @Insert(onConflict = OnConflictStrategy.REPLACE) handles update
+    override suspend fun updateTransaction(transaction: Transaction) {
+        transactionDao.insert(transaction.toEntity())
+        WidgetUpdateController.updateAllWidgets(context)
+    }
         
-    override suspend fun deleteTransaction(transaction: Transaction) = 
+    override suspend fun deleteTransaction(transaction: Transaction) {
         transactionDao.delete(transaction.toEntity())
+        WidgetUpdateController.updateAllWidgets(context)
+    }
 
-    override suspend fun deleteTransactionById(transactionId: String) =
+    override suspend fun deleteTransactionById(transactionId: String) {
         transactionDao.deleteById(transactionId)
+        WidgetUpdateController.updateAllWidgets(context)
+    }
 }

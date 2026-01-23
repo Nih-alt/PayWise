@@ -23,6 +23,7 @@ interface AppContainer {
     val savingsGoalRepository: SavingsGoalRepository
     val attachmentRepository: AttachmentRepository
     val claimRepository: ClaimRepository
+    val smartRuleRepository: SmartRuleRepository
     val userPreferencesRepository: UserPreferencesRepository
     val appLockRepository: AppLockRepository
     val recurringReminderScheduler: RecurringReminderScheduler
@@ -43,6 +44,7 @@ interface AppContainer {
     val getCardStatementUseCase: GetCardStatementUseCase
     val getCardBillUseCase: GetCardBillUseCase
     val addGoalAllocationUseCase: AddGoalAllocationUseCase
+    val smartRuleEngine: SmartRuleEngine
 
     // App Lock Use Cases
     val getAppLockSettingsUseCase: GetAppLockSettingsUseCase
@@ -58,7 +60,7 @@ interface AppContainer {
 }
 
 class DefaultAppContainer(private val context: Context) : AppContainer {
-    private val database: AppDatabase by lazy { AppDatabase.getDatabase(context) }
+    val database: AppDatabase by lazy { AppDatabase.getDatabase(context) }
 
     override val userPreferencesRepository: UserPreferencesRepository by lazy {
         UserPreferencesRepository(context)
@@ -81,7 +83,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val transactionRepository: TransactionRepository by lazy {
-        OfflineTransactionRepository(database.transactionDao())
+        OfflineTransactionRepository(context, database.transactionDao())
     }
 
     override val recurringRepository: RecurringRepository by lazy {
@@ -114,6 +116,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val claimRepository: ClaimRepository by lazy {
         OfflineClaimRepository(database.claimDao())
+    }
+
+    override val smartRuleRepository: SmartRuleRepository by lazy {
+        OfflineSmartRuleRepository(database.smartRuleDao())
     }
 
     override val recurringReminderScheduler: RecurringReminderScheduler by lazy {
@@ -178,6 +184,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val addGoalAllocationUseCase: AddGoalAllocationUseCase by lazy {
         AddGoalAllocationUseCase(transactionRepository)
+    }
+
+    override val smartRuleEngine: SmartRuleEngine by lazy {
+        SmartRuleEngine(smartRuleRepository)
     }
 
     override val getAppLockSettingsUseCase: GetAppLockSettingsUseCase by lazy {

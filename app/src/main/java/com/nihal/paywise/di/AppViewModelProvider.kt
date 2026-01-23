@@ -6,6 +6,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.nihal.paywise.ExpenseTrackerApp
+import com.nihal.paywise.data.local.AppDatabase
 import com.nihal.paywise.ui.accounts.CardBillDetailViewModel
 import com.nihal.paywise.ui.accounts.CardDetailsViewModel
 import com.nihal.paywise.ui.addtxn.TransactionEditorViewModel
@@ -23,6 +24,8 @@ import com.nihal.paywise.ui.recurring.RecurringListViewModel
 import com.nihal.paywise.ui.recurring.RecurringTransactionsViewModel
 import com.nihal.paywise.ui.reports.ReportsViewModel
 import com.nihal.paywise.ui.settings.SettingsViewModel
+import com.nihal.paywise.ui.settings.smartrules.SmartRuleEditorViewModel
+import com.nihal.paywise.ui.settings.smartrules.SmartRulesViewModel
 import com.nihal.paywise.ui.settings.setpin.SetPinViewModel
 import com.nihal.paywise.ui.transactions.TransactionsListViewModel
 
@@ -95,7 +98,8 @@ object AppViewModelProvider {
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository,
                 inventoryApplication().container.categoryRepository,
-                inventoryApplication().container.attachmentRepository
+                inventoryApplication().container.attachmentRepository,
+                inventoryApplication().container.smartRuleEngine
             )
         }
         initializer {
@@ -140,6 +144,19 @@ object AppViewModelProvider {
                 (inventoryApplication().container.claimRepository as com.nihal.paywise.data.repository.OfflineClaimRepository).claimDao,
                 inventoryApplication().container.transactionRepository,
                 inventoryApplication().container.accountRepository
+            )
+        }
+        initializer {
+            SmartRulesViewModel(
+                inventoryApplication().container.smartRuleRepository
+            )
+        }
+        initializer {
+            SmartRuleEditorViewModel(
+                this.createSavedStateHandle(),
+                inventoryApplication().container.smartRuleRepository,
+                inventoryApplication().container.accountRepository,
+                inventoryApplication().container.categoryRepository
             )
         }
         initializer {

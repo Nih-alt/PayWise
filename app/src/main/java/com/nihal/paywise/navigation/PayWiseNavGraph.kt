@@ -149,8 +149,22 @@ fun PayWiseNavHost(
                         }
                     },
                     onSetPinClick = { navController.navigate("set_pin") },
-                    onPrivacyClick = { navController.navigate("privacy") }
+                    onPrivacyClick = { navController.navigate("privacy") },
+                    onSmartTagsClick = { navController.navigate("settings_smart_rules") }
                 )
+            }
+            composable("settings_smart_rules") {
+                com.nihal.paywise.ui.settings.smartrules.SmartRulesScreen(
+                    onBack = { navController.popBackStack() },
+                    onAddRule = { navController.navigate("smart_rule_editor") },
+                    onEditRule = { id -> navController.navigate("smart_rule_editor?ruleId=$id") }
+                )
+            }
+            composable(
+                route = "smart_rule_editor?ruleId={ruleId}",
+                arguments = listOf(navArgument("ruleId") { type = NavType.StringType; nullable = true; defaultValue = null })
+            ) {
+                com.nihal.paywise.ui.settings.smartrules.SmartRuleEditorScreen(onBack = { navController.popBackStack() })
             }
             composable("recurring_list") {
                 RecurringListScreen(

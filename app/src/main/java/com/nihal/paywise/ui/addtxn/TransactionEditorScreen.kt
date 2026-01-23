@@ -124,6 +124,37 @@ fun TransactionEditorScreen(
 
                 item {
                     GlassCard {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            OutlinedTextField(
+                                value = uiState.payee,
+                                onValueChange = { viewModel.updatePayee(it) },
+                                label = { Text("Merchant / Payee") },
+                                placeholder = { Text("e.g. Swiggy, Uber, Amazon") },
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                trailingIcon = { Icon(Icons.Default.Store, null) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent
+                                )
+                            )
+                            
+                            uiState.suggestedRule?.let { rule ->
+                                Spacer(Modifier.height(8.dp))
+                                SuggestionChip(
+                                    onClick = { viewModel.applySuggestion() },
+                                    label = { Text("Apply: ${categories.find { it.id == rule.outputCategoryId }?.name ?: "Dining"}") },
+                                    icon = { Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(16.dp)) }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                item {
+                    GlassCard {
                         Column(modifier = Modifier.padding(vertical = 8.dp)) {
                             SelectorRow(
                                 label = if (uiState.transactionType == TransactionType.TRANSFER) "From Account" else "Account",

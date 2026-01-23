@@ -41,6 +41,7 @@ fun SettingsScreen(
     onImportSuccess: () -> Unit,
     onSetPinClick: () -> Unit,
     onPrivacyClick: () -> Unit,
+    onSmartTagsClick: () -> Unit,
     snackbarHostState: SnackbarHostState,
     viewModel: SettingsViewModel = viewModel(factory = AppViewModelProvider.Factory)
 ) {
@@ -115,6 +116,18 @@ fun SettingsScreen(
                             title = "Currency",
                             subtitle = "Indian Rupee (₹)",
                             icon = Icons.Default.CurrencyRupee
+                        )
+                    }
+                }
+
+                // Intelligence
+                item {
+                    SettingsSectionCard(title = "Intelligence") {
+                        ActionRow(
+                            title = "Smart Tags",
+                            subtitle = "Auto-categorize transactions as you type",
+                            icon = Icons.Default.SmartButton,
+                            onClick = onSmartTagsClick
                         )
                     }
                 }

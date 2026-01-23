@@ -13,6 +13,7 @@ import com.nihal.paywise.data.repository.AttachmentRepository
 import com.nihal.paywise.data.repository.CategoryRepository
 import com.nihal.paywise.data.repository.TransactionRepository
 import com.nihal.paywise.domain.model.*
+import com.nihal.paywise.domain.usecase.SmartRuleEngine
 import com.nihal.paywise.util.BudgetCheckWorker
 import com.nihal.paywise.util.FileHelper
 import kotlinx.coroutines.flow.*
@@ -23,6 +24,7 @@ import java.util.UUID
 
 data class TransactionEditorUiState(
     val amountInput: String = "",
+    val payee: String = "",
     val selectedAccountId: String? = null,
     val selectedCounterAccountId: String? = null,
     val selectedCategoryId: String? = null,
@@ -32,7 +34,8 @@ data class TransactionEditorUiState(
     val isEditMode: Boolean = false,
     val isSaved: Boolean = false,
     val isLoading: Boolean = false,
-    val attachments: List<AttachmentEntity> = emptyList()
+    val attachments: List<AttachmentEntity> = emptyList(),
+    val suggestedRule: SmartRule? = null
 )
 
 class TransactionEditorViewModel(
@@ -41,7 +44,8 @@ class TransactionEditorViewModel(
     private val transactionRepository: TransactionRepository,
     private val accountRepository: AccountRepository,
     private val categoryRepository: CategoryRepository,
-    private val attachmentRepository: AttachmentRepository
+    private val attachmentRepository: AttachmentRepository,
+    private val smartRuleEngine: SmartRuleEngine
 ) : ViewModel() {
 
     private var currentTxnId: String = savedStateHandle["transactionId"] ?: UUID.randomUUID().toString()
@@ -78,6 +82,7 @@ class TransactionEditorViewModel(
             if (txn != null) {
                 uiState = uiState.copy(
                     amountInput = (txn.amountPaise / 100.0).toString(),
+                    payee = txn.payee ?: "",
                     selectedAccountId = txn.accountId,
                     selectedCounterAccountId = txn.counterAccountId,
                     selectedCategoryId = txn.categoryId,
@@ -96,6 +101,24 @@ class TransactionEditorViewModel(
             attachmentRepository.observeAttachmentsForTxn(txnId).collect {
                 uiState = uiState.copy(attachments = it)
             }
+        }
+    }
+
+    fun updatePayee(input: String) {
+        uiState = uiState.copy(payee = input)
+        viewModelScope.launch {
+            val match = smartRuleEngine.getMatch(input)
+            uiState = uiState.copy(suggestedRule = match)
+        }
+    }
+
+    fun applySuggestion() {
+        uiState.suggestedRule?.let { rule ->
+            uiState = uiState.copy(
+                selectedCategoryId = rule.outputCategoryId ?: uiState.selectedCategoryId,
+                selectedAccountId = rule.outputAccountId ?: uiState.selectedAccountId,
+                suggestedRule = null
+            )
         }
     }
 
@@ -161,6 +184,7 @@ class TransactionEditorViewModel(
                 counterAccountId = uiState.selectedCounterAccountId,
                 categoryId = if (uiState.transactionType == TransactionType.TRANSFER) null else uiState.selectedCategoryId,
                 note = uiState.note.ifBlank { null },
+                payee = uiState.payee.ifBlank { null },
                 recurringId = null,
                 splitOfTransactionId = null
             )
@@ -177,7 +201,6 @@ class TransactionEditorViewModel(
             val txn = transactionRepository.getTransactionById(currentTxnId)
             if (txn != null) {
                 transactionRepository.deleteTransaction(txn)
-                // Attachments are deleted by CASCADE in DB, but we should clean up files too
                 val folder = File(application.filesDir, "attachments/$currentTxnId")
                 folder.deleteRecursively()
                 onSuccess()

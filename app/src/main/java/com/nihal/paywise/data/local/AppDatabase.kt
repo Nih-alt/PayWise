@@ -22,9 +22,10 @@ import com.nihal.paywise.data.local.entity.*
         SavingsGoalEntity::class,
         AttachmentEntity::class,
         ClaimEntity::class,
-        ClaimItemEntity::class
+        ClaimItemEntity::class,
+        SmartRuleEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(PayWiseConverters::class)
@@ -40,6 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun savingsGoalDao(): SavingsGoalDao
     abstract fun attachmentDao(): AttachmentDao
     abstract fun claimDao(): ClaimDao
+    abstract fun smartRuleDao(): SmartRuleDao
 
     companion object {
         @Volatile
@@ -216,10 +218,38 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `smart_rules` (
+                        `id` TEXT NOT NULL, 
+                        `matchText` TEXT NOT NULL, 
+                        `matchMode` TEXT NOT NULL, 
+                        `outputCategoryId` TEXT, 
+                        `outputTagIds` TEXT, 
+                        `outputAccountId` TEXT, 
+                        `priority` INTEGER NOT NULL, 
+                        `enabled` INTEGER NOT NULL DEFAULT 1, 
+                        `createdAt` INTEGER NOT NULL, 
+                        PRIMARY KEY(`id`)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_smart_rules_matchText` ON `smart_rules` (`matchText`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_smart_rules_priority` ON `smart_rules` (`priority`)")
+                db.execSQL("ALTER TABLE `transactions` ADD COLUMN `payee` TEXT")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return Instance ?: synchronized(this) {
                 Room.databaseBuilder(context, AppDatabase::class.java, "expense_tracker.db")
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+                    .addMigrations(
+                        MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, 
+                        MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
+                        MIGRATION_11_12
+                    )
                     .build()
                     .also { Instance = it }
             }
